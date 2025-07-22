@@ -1,24 +1,17 @@
-<script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
-import Title from './components/Title.vue'
-import Welcome from '../../docs/index.md'
-</script>
-
 <template>
-  <Welcome />
+  <header>
+    <h1>My VitePress Clone</h1>
+    <nav>
+      <router-link to="/">Home</router-link> |
+      <router-link to="/total">Index</router-link>
+    </nav>
+  </header>
+  <main>
+    <router-view /> </main>
 </template>
+<script setup lang="ts">
+import { ref } from "vue";
+import router from "./router"; // 引入路由
 
-<style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
-}
-</style>
+console.log('🦄  file: App.vue:18  currentRoute:', router)
+</script>router
