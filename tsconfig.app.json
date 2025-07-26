@@ -13,5 +13,5 @@
     "noEmit": true,
     "isolatedModules": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "vite-env.d.ts"]
+  "include": ["packages/docs-site/src/**/*.ts", "packages/docs-site/src/**/*.tsx", "packages/docs-site/src/**/*.vue", "packages/docs-site/vite-env.d.ts"]
 }

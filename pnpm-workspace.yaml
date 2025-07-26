@@ -1,0 +1,3 @@
+# /pnpm-workspace.yaml
+packages:
+  - "packages/*" # 匹配 packages 目录下的所有子文件夹

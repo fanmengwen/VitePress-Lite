@@ -1,28 +1,12 @@
 {
-  "name": "vitepress-lite",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "dayjs": "^1.11.13",
-    "fast-glob": "^3.3.3",
-    "gray-matter": "^4.0.3",
-    "markdown-it": "^14.1.0",
-    "serve": "^14.2.4",
-    "vue": "^3.5.17",
-    "vue-router": "4"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-vue": "^6.0.0",
-    "@vue/tsconfig": "^0.7.0",
-    "typescript": "~5.8.3",
-    "vite": "^7.0.4",
-    "vite-plugin-md": "^0.21.5",
-    "vue-tsc": "^2.2.12"
+    "name": "vitepress-lite-monorepo",
+    "private": true,
+    "scripts": {
+      "dev": "pnpm --filter docs-site dev",
+      "build": "pnpm --filter docs-site build"
+    },
+    "devDependencies": {
+      "typescript": "^5.2.2",
+      "vite": "^5.3.1"
+    }
   }
-}

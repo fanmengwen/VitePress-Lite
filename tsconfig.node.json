@@ -19,5 +19,5 @@
     "noUncheckedSideEffectImports": true,
     "isolatedModules": true
   },
-  "include": ["vite.config.ts"]
+  "include": ["packages/docs-site/vite.config.ts"]
 }
