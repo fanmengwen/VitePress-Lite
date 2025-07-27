@@ -1,4 +1,6 @@
 import glob from "fast-glob";
+import { readFileSync } from "fs";
+import matter from "gray-matter";
 
 function pathToRoutePath(path) {
   // 传入的 path 例子: 'docs/guide/installation.md'
@@ -37,15 +39,28 @@ export default function virtualPagesPlugin() {
 
         const routes = pages.map((page) => {
           const routePath = pathToRoutePath(page);
+          
+          // 读取 markdown 文件并解析 frontmatter
+          let title = page.replace(/^docs\//, "").replace(/\.md$/, "");
+          try {
+            const fileContent = readFileSync(page, 'utf-8');
+            const { data } = matter(fileContent);
+            if (data.title) {
+              title = data.title;
+            }
+          } catch (error) {
+            console.warn(`Failed to read title from ${page}:`, error.message);
+          }
+          
           return {
             path: routePath,
-            title: page.replace(/^docs\//, "").replace(/\.md$/, ""),
+            title: title,
             component: `() => import('/${page}')`,
           };
         });
         const routesCode = JSON.stringify(routes, null, 2).replace(
           /"component": "(\(\) => import\('.*?'\))"/g,
-          '"component": $1'
+          '"component": $1',
         );
 
         return `export default ${routesCode}`;

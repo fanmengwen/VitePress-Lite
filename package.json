@@ -1,12 +1,43 @@
 {
-    "name": "vitepress-lite-monorepo",
-    "private": true,
-    "scripts": {
-      "dev": "pnpm --filter docs-site dev",
-      "build": "pnpm --filter docs-site build"
-    },
-    "devDependencies": {
-      "typescript": "^5.2.2",
-      "vite": "^5.3.1"
-    }
-  }
+  "name": "vitepress-lite-monorepo",
+  "private": true,
+  "description": "A lightweight VitePress-inspired documentation platform with API backend",
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./packages/**\" dev",
+    "dev:docs": "pnpm --filter docs-site dev",
+    "dev:api": "pnpm --filter api-server dev",
+    "build": "pnpm --filter \"./packages/**\" build",
+    "build:docs": "pnpm --filter docs-site build",
+    "build:api": "pnpm --filter api-server build",
+    "test": "pnpm --filter \"./packages/**\" test",
+    "test:api": "pnpm --filter api-server test",
+    "test:api-integration": "pnpm --filter api-server test:api",
+    "test:watch": "pnpm --parallel --filter \"./packages/**\" test:watch",
+    "db:migrate": "pnpm --filter api-server db:migrate",
+    "db:generate": "pnpm --filter api-server db:generate",
+    "db:studio": "pnpm --filter api-server db:studio",
+    "db:seed": "pnpm --filter api-server db:seed",
+    "db:sync": "pnpm --filter api-server db:sync",
+    "db:reset": "pnpm --filter api-server db:migrate reset && pnpm db:seed",
+    "clean": "pnpm --parallel --filter \"./packages/**\" run clean",
+    "preview": "pnpm --filter docs-site preview",
+    "start:production": "pnpm build && pnpm --filter api-server start & pnpm --filter docs-site preview",
+    "format": "prettier --write \"packages/**/*.{ts,vue,js,json,md}\"",
+    "lint": "pnpm --parallel --filter \"./packages/**\" run lint",
+    "type-check": "pnpm --parallel --filter \"./packages/**\" run type-check",
+    "deps:update": "pnpm update -r",
+    "deps:outdated": "pnpm outdated -r"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "typescript": "^5.2.2",
+    "vite": "^5.3.1",
+    "prettier": "^3.0.0",
+    "concurrently": "^8.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0"
+}

@@ -6,7 +6,7 @@
 </template>
 
 <script setup lang="ts">
-import MarkdownList from '../components/MarkdownList.vue'
+import MarkdownList from "../components/MarkdownList.vue";
 </script>
 
 <style scoped>

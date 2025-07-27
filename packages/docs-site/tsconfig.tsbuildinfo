@@ -1,0 +1,1 @@
+{"root":["./src/main.ts","./src/vite-env.d.ts","./src/api/index.ts","./src/composables/usepostsdata.ts","./src/router/index.ts","./src/app.vue","./src/components/markdowncard.vue","./src/components/markdownlist.vue","./src/components/title.vue","./src/components/common/globalnav.vue","./src/pages/index.vue","./vite-env.d.ts"],"errors":true,"version":"5.8.3"}

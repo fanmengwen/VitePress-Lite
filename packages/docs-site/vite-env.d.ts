@@ -3,9 +3,8 @@ declare module "virtual:pages" {
   export default pages;
 }
 
-
-declare module '*.vue' {
-  import { DefineComponent } from 'vue'
-  const component: DefineComponent<{}, {}, any>
-  export default component
+declare module "*.vue" {
+  import { DefineComponent } from "vue";
+  const component: DefineComponent<{}, {}, any>;
+  export default component;
 }
