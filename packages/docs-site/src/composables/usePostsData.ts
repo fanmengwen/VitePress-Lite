@@ -2,9 +2,9 @@ import { ref, onMounted, type Ref } from "vue";
 import { api, type Post, type ApiResponse } from "@/api";
 
 export interface PostsState {
-  posts: Post[];
-  loading: boolean;
-  error: string | null;
+  posts: Ref<Post[]>;
+  loading: Ref<boolean>;
+  error: Ref<string | null>;
   refresh: () => Promise<void>;
 }
 
@@ -18,16 +18,12 @@ export function usePostsData(): PostsState {
     error.value = null;
 
     try {
-      const response: ApiResponse<Post[]> = await api.getPosts();
+      const response: ApiResponse<{ posts: Post[] }> = await api.getPosts();
 
-      if (response.success && response.data) {
+      if (response.success && response.data && response.data.posts) {
         // 只显示已发布的文章，按创建时间倒序排列
-        posts.value = response.data.posts
-          .filter((post) => post.published)
-          .sort(
-            (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-          );
+        posts.value = (response.data.posts || [])
+          .filter((post) => post.published);
       } else {
         throw new Error(
           response.message || response.error || "Failed to fetch posts",
@@ -55,10 +51,12 @@ export function usePostsData(): PostsState {
     fetchPosts();
   });
 
+  // console.log("🚀 ~ fetchPosts ~ posts:", posts, posts.value)
+
   return {
-    posts: posts.value,
-    loading: loading.value,
-    error: error.value,
+    posts,
+    loading,
+    error,
     refresh,
   };
 }

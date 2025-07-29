@@ -36,11 +36,13 @@ export interface Post {
   title: string;
   content: string;
   slug: string;
+  excerpt?: string;
   published: boolean;
   createdAt: string;
   updatedAt: string;
   author: {
     id: number;
+    name?: string;
     email: string;
   };
 }
@@ -145,15 +147,13 @@ class ApiClient {
   }
 
   // Posts methods
-  async getPosts(): Promise<ApiResponse<Post[]>> {
+  async getPosts(): Promise<ApiResponse<{ posts: Post[] }>> {
     const response = await this.client.get("/posts");
-    console.log("🚀 ~ ApiClient ~ getPosts ~ response:", response);
     return response.data;
   }
 
   async getPost(slug: string): Promise<ApiResponse<Post>> {
     const response = await this.client.get(`/posts/${slug}`);
-    console.log("🚀 ~ ApiClient ~ getPost ~ response:", response);
     return response.data;
   }
 
