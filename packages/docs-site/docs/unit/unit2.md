@@ -1,8 +1,9 @@
 ---
 title: 【与 webpack 差异】
-date: "2025-07-22"
-author: "meng"
-tags: ["Vite", "Plugin", "Markdown"]
+author: "mengwen"
+date: "2025-01-01"
+published: true
+excerpt: "Vite 会在服务端维护一张模块依赖图（ModuleGraph），缓存所有模块间的依赖关系。"
 ---
 
 ## 与 webpack 差异

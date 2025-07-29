@@ -8,23 +8,28 @@
   >
     <!-- 卡片头部 -->
     <div class="card-header">
-      <div class="title">{{ cardIcon }} {{ displayTitle }}</div>
-      <div v-if="!isStatic && post" class="post-meta">
-        <span class="author">👤 {{ post.author.email }}</span>
+      <div class="title">
+        {{ cardIcon }} {{ displayTitle }}
+        <span v-if="post" class="data-indicator" title="已关联文章数据">✨</span>
+      </div>
+      <div v-if="post" class="post-meta">
+        <span class="author">👤 {{ post.author.name || post.author.email }}</span>
         <span class="date">📅 {{ formatDate(post.createdAt) }}</span>
       </div>
     </div>
 
     <!-- 卡片内容 -->
     <div class="card-content">
-      <div v-if="!isStatic && post && post.content" class="content-preview">
-        {{ truncateContent(post.content) }}
+      <div v-if="post" class="content-preview">
+        {{ displayExcerpt }}
       </div>
-      <div class="path">{{ displayPath }}</div>
+      <div v-else-if="isStatic" class="static-note">
+        📄 静态文档页面
+      </div>
     </div>
 
     <!-- 卡片底部信息 -->
-    <div v-if="!isStatic && post" class="card-footer">
+    <div v-if="post" class="card-footer">
       <span class="published-status"> ✅ 已发布 </span>
       <span class="updated-date"> 🔄 {{ formatDate(post.updatedAt) }} </span>
     </div>
@@ -62,7 +67,7 @@ const linkTo = computed(() => {
 const linkHref = computed(() => {
   if (!props.isStatic && props.post) {
     // 动态文章使用slug生成链接
-    return `/posts/${props.post.slug}`;
+    return `/${props.post.slug}`;
   }
   return undefined;
 });
@@ -86,6 +91,22 @@ const displayPath = computed(() => {
 // 卡片图标
 const cardIcon = computed(() => {
   return props.isStatic ? "📘" : "📰";
+});
+
+// 显示文章摘要
+const displayExcerpt = computed(() => {
+  if (!props.post) return "";
+  
+  // 优先使用 excerpt，否则截断 content
+  if (props.post.excerpt) {
+    return props.post.excerpt;
+  }
+  
+  if (props.post.content) {
+    return truncateContent(props.post.content, 150);
+  }
+  
+  return "暂无简介...";
 });
 
 // 格式化日期
@@ -148,6 +169,19 @@ const truncateContent = (content: string, maxLength = 120): string => {
   font-weight: bold;
   margin-bottom: 0.5rem;
   line-height: 1.3;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.data-indicator {
+  font-size: 0.8rem;
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
 
 .post-meta {
@@ -171,6 +205,25 @@ const truncateContent = (content: string, maxLength = 120): string => {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+/* 内容预览样式 */
+.content-preview {
+  font-size: 0.9rem;
+  color: #666;
+  line-height: 1.4;
+  margin-bottom: 0.5rem;
+}
+
+/* 静态文档提示 */
+.static-note {
+  font-size: 0.85rem;
+  color: #888;
+  font-style: italic;
+  padding: 0.5rem;
+  background: #f5f5f5;
+  border-radius: 4px;
+  text-align: center;
 }
 
 .content-preview {

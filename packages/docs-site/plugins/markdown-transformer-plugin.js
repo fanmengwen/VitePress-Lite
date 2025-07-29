@@ -74,18 +74,10 @@ export default function markdownTransformerPlugin(options = {}) {
             <!-- 静态Markdown内容 (来自文件) -->
             <div class="static-content">
               <div class="content-separator">
-                <h3>📄 静态内容 (来自.md文件)</h3>
               </div>
               <div class="markdown-body" v-html="html" />
             </div>
 
-            <!-- 动态Markdown内容 (来自数据库) -->
-            <div v-if="postData && postData.content" class="api-content">
-              <div class="content-separator">
-                <h3>📡 动态内容 (来自数据库)</h3>
-              </div>
-              <div class="markdown-body api-markdown" v-html="renderMarkdown(postData.content)" />
-            </div>
           </div>
       
           <!-- 文章底部信息 -->

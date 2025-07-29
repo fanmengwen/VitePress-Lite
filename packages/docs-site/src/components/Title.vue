@@ -1,13 +1,26 @@
 <script setup lang="ts">
 import { defineProps, onMounted, ref } from "vue";
-import { debounce } from "lodash-es";
 import dayjs from "dayjs";
+
+// Simple debounce function implementation
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+}
 
 const props = defineProps(["title"]);
 const title = ref(props.title.toUpperCase());
 
 onMounted(() => {
-  const debouncedTitle = debounce(title.value, 1000);
+  const debouncedTitle = debounce(() => {
+    console.log("Debounced title:", title.value);
+  }, 1000);
   debouncedTitle();
 });
 

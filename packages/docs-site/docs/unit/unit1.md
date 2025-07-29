@@ -1,8 +1,9 @@
 ---
-title: 【核心理念】
-date: "2025-07-22"
-author: "meng"
-tags: ["Vite", "Plugin", "Markdown"]
+title: "【核心理念】"
+author: "mengwen"
+date: "2025-01-01"
+published: true
+excerpt: "核心理念与快速"
 ---
 
 ## 模块一：核心理念与快速
