@@ -32,6 +32,7 @@ export const createPostSchema = Joi.object<CreatePostDto>({
   title: Joi.string().required().messages({
     "any.required": "标题是必填项",
   }),
+  slug: Joi.string().optional(),
   content: Joi.string().required().messages({
     "any.required": "内容是必填项",
   }),
@@ -41,6 +42,7 @@ export const createPostSchema = Joi.object<CreatePostDto>({
 
 export const updatePostSchema = Joi.object<UpdatePostDto>({
   title: Joi.string().optional(),
+  slug: Joi.string().optional(),
   content: Joi.string().optional(),
   excerpt: Joi.string().optional().allow(""),
   published: Joi.boolean().optional(),

@@ -1,6 +1,7 @@
 // 测试环境设置
 process.env.NODE_ENV = "test";
-process.env.DATABASE_URL = "file:./test.db";
+process.env.DATABASE_PROVIDER = "sqlite";
+process.env.DATABASE_URL = "file:./prisma/test.db";
 process.env.JWT_SECRET = "test-jwt-secret-for-testing-only";
 
 // 增加测试超时时间

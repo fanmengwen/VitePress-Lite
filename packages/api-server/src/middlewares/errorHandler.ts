@@ -60,8 +60,15 @@ export const createError = (
   return error;
 };
 
-// 异步错误捕获包装器
-export const asyncHandler =
-  (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
+// 异步错误捕获包装器 - 修复类型定义
+type AsyncRequestHandler = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => Promise<any>;
+
+export const asyncHandler = (fn: AsyncRequestHandler) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
+};

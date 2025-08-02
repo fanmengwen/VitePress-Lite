@@ -17,7 +17,13 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:seed": "npx tsx prisma/seed.ts",
-    "db:sync": "npx tsx prisma/sync-docs.ts"
+    "db:sync": "npx tsx prisma/sync-docs.ts",
+    "db:reset": "prisma migrate reset --force",
+    "db:postgresql:migrate": "prisma migrate dev --schema=./prisma/schema.postgresql.prisma",
+    "db:postgresql:generate": "prisma generate --schema=./prisma/schema.postgresql.prisma",
+    "db:postgresql:studio": "prisma studio --schema=./prisma/schema.postgresql.prisma",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down"
   },
   "dependencies": {
     "@prisma/client": "^5.9.1",
@@ -30,7 +36,10 @@
     "joi": "^17.11.0",
     "jsonwebtoken": "^9.0.2",
     "markdown-it": "^14.1.0",
-    "node-fetch": "^2.7.0"
+    "node-fetch": "^2.7.0",
+    "pg": "^8.11.3",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -39,7 +48,10 @@
     "@types/jest": "^26.0.24",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20.10.6",
+    "@types/pg": "^8.10.9",
     "@types/supertest": "^6.0.2",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-express": "^4.1.6",
     "jest": "^26.6.3",
     "prisma": "^5.9.1",
     "supertest": "^6.3.4",

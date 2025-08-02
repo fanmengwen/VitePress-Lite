@@ -2,6 +2,9 @@
 
 > 基于 Node.js + Express + Prisma 的现代化 API 服务，为文档站点提供用户认证和内容管理功能
 
+[![API Documentation](https://img.shields.io/badge/API-Swagger%20Docs-green)](http://localhost:3001/api-docs)
+[![Database](https://img.shields.io/badge/Database-SQLite%20%7C%20PostgreSQL-blue)](https://www.prisma.io/)
+
 ## 🎯 服务概述
 
 本 API 服务器实现了完整的后端功能，支持：
@@ -10,6 +13,55 @@
 - **文章管理**：CRUD 操作、发布状态控制、作者关联
 - **数据同步**：Markdown 文件到数据库的自动同步
 - **混合架构支持**：为前端提供动态元数据补充
+- **交互式API文档**：基于 Swagger/OpenAPI 的完整 API 文档
+- **灵活数据库支持**：开发环境 SQLite，生产环境 PostgreSQL
+
+## 📚 快速开始
+
+### 1. 在线 API 文档
+
+启动服务器后，访问交互式 API 文档：
+
+```bash
+# 启动服务器
+npm run dev
+
+# 访问 API 文档 (在浏览器中打开)
+http://localhost:3001/api-docs
+```
+
+### 2. 数据库配置选择
+
+#### 🧪 开发环境 (SQLite - 推荐)
+
+**优势**: 零配置、快速启动、轻量级，适合开发和测试
+
+```bash
+# 使用默认 SQLite 配置
+cp env.example .env
+
+# 直接启动（无需额外数据库安装）
+npm run dev
+```
+
+#### 🚀 生产环境 (PostgreSQL - 推荐)
+
+**优势**: 高性能、高并发、功能丰富，适合生产部署
+
+```bash
+# 1. 启动 PostgreSQL (使用 Docker)
+npm run docker:up
+
+# 2. 配置环境变量
+cp env.example .env
+# 编辑 .env 文件，取消注释 PostgreSQL 配置
+
+# 3. 运行数据库迁移
+npm run db:migrate
+
+# 4. 启动服务
+npm run dev
+```
 
 ## 🏗️ 技术架构
 
@@ -18,6 +70,8 @@
 - **运行时**：Node.js + Express.js
 - **数据库**：Prisma ORM + SQLite (开发) / PostgreSQL (生产)
 - **认证**：JWT + bcryptjs 密码哈希
+- **API文档**：Swagger UI + OpenAPI 3.0
+- **容器化**：Docker + Docker Compose (PostgreSQL)
 - **测试**：Jest + Supertest
 - **开发工具**：tsx (TypeScript 执行) + ts-node-dev
 
@@ -25,12 +79,23 @@
 
 ```
 src/
-├── controllers/        # 控制器层：处理 HTTP 请求响应
-├── services/          # 服务层：业务逻辑实现
-├── middlewares/       # 中间件：认证、错误处理等
-├── routes/           # 路由层：API 端点定义
-├── types/            # TypeScript 类型定义
-└── utils/            # 工具函数：验证、数据库等
+├── config/           # 配置文件：Swagger、数据库等
+├── controllers/      # 控制器层：处理 HTTP 请求响应
+├── services/         # 服务层：业务逻辑实现
+├── middlewares/      # 中间件：认证、错误处理等
+├── routes/          # 路由层：API 端点定义
+├── types/           # TypeScript 类型定义
+└── utils/           # 工具函数：验证、数据库等
+```
+
+### 🐳 Docker 支持
+
+项目包含完整的 Docker Compose 配置：
+
+```yaml
+services:
+  postgres: # PostgreSQL 数据库
+  adminer: # 数据库管理界面 (http://localhost:8080)
 ```
 
 ## 🗄️ 数据模型
@@ -66,7 +131,78 @@ src/
 }
 ```
 
+## 🔧 环境配置详解
+
+### 数据库配置切换
+
+#### SQLite 配置 (开发环境)
+
+```bash
+# .env 文件配置
+DATABASE_PROVIDER=sqlite
+DATABASE_URL="file:./prisma/dev.db"
+```
+
+#### PostgreSQL 配置 (生产环境)
+
+```bash
+# .env 文件配置
+DATABASE_PROVIDER=postgresql
+DATABASE_URL="postgresql://postgres:postgres123@localhost:5432/vitepress_lite?schema=public"
+```
+
+**适用场景**:
+
+- ✅ 生产环境部署
+- ✅ 高并发访问
+- ✅ 复杂查询优化
+- ✅ 数据备份和恢复
+
+### 🔄 数据库迁移指南
+
+```bash
+# 1. 切换数据库配置后，生成新的 Prisma Client
+npm run db:generate
+
+# 2. 运行数据库迁移
+npm run db:migrate
+
+# 3. (可选) 重置数据库并重新创建
+npm run db:reset
+
+# 4. (可选) 填充测试数据
+npm run db:seed
+```
+
+### 🏥 数据库健康检查
+
+访问健康检查端点查看当前数据库状态：
+
+```bash
+GET /api/health
+```
+
+响应示例：
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "database": "postgresql",
+  "swagger": true
+}
+```
+
 ## 🔌 API 端点文档
+
+> 📖 使用交互式 Swagger 文档 ([http://localhost:3001/api-docs](http://localhost:3001/api-docs)) 进行 API 测试和探索
+
+### ✨ Swagger API 文档特性
+
+- 🔍 **交互式测试**: 直接在浏览器中测试所有 API 端点
+- 📋 **完整Schema**: 详细的请求/响应数据结构
+- 🔐 **认证支持**: 内置 JWT 令牌认证测试
+- 📚 **实时更新**: 代码变更自动同步到文档
 
 ### 🔐 认证相关
 

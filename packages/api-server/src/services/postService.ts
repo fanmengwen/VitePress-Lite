@@ -61,7 +61,7 @@ export class PostService {
   }
 
   static async createPost(postData: CreatePostDto, authorId: number) {
-    const slug = generateSlug(postData.title);
+    const slug = postData.slug || generateSlug(postData.title);
 
     // 检查 slug 是否已存在
     const existingPost = await prisma.post.findUnique({
@@ -69,7 +69,7 @@ export class PostService {
     });
 
     if (existingPost) {
-      throw createError("该标题已存在，请修改标题", 409);
+      throw createError("该文章标识符已存在，请修改标题或slug", 409);
     }
 
     const post = await prisma.post.create({
@@ -78,19 +78,10 @@ export class PostService {
         slug,
         content: postData.content,
         excerpt: postData.excerpt,
-        published:
-          postData.published !== undefined ? postData.published : false,
+        published: postData.published || false,
         authorId,
       },
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        content: true,
-        excerpt: true,
-        published: true,
-        createdAt: true,
-        updatedAt: true,
+      include: {
         author: {
           select: {
             id: true,
