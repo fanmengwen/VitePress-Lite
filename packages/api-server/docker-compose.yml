@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: vitepress-lite-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vitepress_lite
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      PGDATA: /data/postgres
+    volumes:
+      - postgres_data:/data/postgres
+    ports:
+      - "5432:5432"
+    networks:
+      - vitepress-lite
+
+  adminer:
+    image: adminer:latest
+    container_name: vitepress-lite-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    networks:
+      - vitepress-lite
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
+
+networks:
+  vitepress-lite:
+    driver: bridge

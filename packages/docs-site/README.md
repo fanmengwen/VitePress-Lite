@@ -102,7 +102,7 @@ graph LR
 - 发布状态和文章统计
 - 用户相关的个性化数据
 
-### 优雅降级机制
+### 降级机制
 
 ```typescript
 // 示例：组合静态和动态数据
@@ -141,24 +141,6 @@ const pageData = {
 - 显示文档摘要信息
 - 支持标签和元数据展示
 - 链接到详细页面
-
-### 状态管理
-
-使用 Vue 3 的组合式 API 和 Pinia：
-
-```typescript
-// composables/usePostsData.ts
-export const usePostsData = () => {
-  const posts = ref([]);
-  const loading = ref(false);
-
-  const fetchPosts = async () => {
-    // 混合数据获取逻辑
-  };
-
-  return { posts, loading, fetchPosts };
-};
-```
 
 ## 🛠️ 开发工作流
 
@@ -200,30 +182,6 @@ published: true
 3. 在导航中可见新页面
 4. 运行同步命令更新数据库
 
-### 自定义主题
-
-**全局样式**：修改 `src/style.css`
-
-```css
-:root {
-  --primary-color: #42b983; /* 主题色 */
-  --bg-color: #ffffff; /* 背景色 */
-  --text-color: #2c3e50; /* 文字色 */
-}
-```
-
-**组件样式**：使用 Scoped CSS
-
-```vue
-<style scoped>
-.markdown-content {
-  max-width: 800px;
-  margin: 0 auto;
-  line-height: 1.7;
-}
-</style>
-```
-
 ## ⚙️ 配置说明
 
 ### Vite 配置 (`vite.config.ts`)
@@ -251,32 +209,13 @@ export default defineConfig({
 - 动态路由：通过虚拟模块自动生成
 - 404 处理：未匹配路由的降级页面
 
-## 🔍 调试与优化
-
-### 开发工具
-
-- **Vite Inspector**：可视化模块依赖图
-- **Vue DevTools**：组件状态调试
-- **Network Tab**：API 请求监控
-
-### 性能优化
-
-- **路由懒加载**：每个页面按需加载
-- **组件缓存**：使用 `keep-alive` 缓存页面状态
-- **API 缓存**：避免重复的数据库查询
-- **静态资源优化**：Vite 自动进行代码分割
-
-## 🚀 扩展指南
-
-### 添加新的 Markdown 插件
+## 添加新的 Markdown 插件
 
 ```javascript
 // vite.config.ts
 markdownTransformerPlugin({
   markdownItPlugins: [
-    [require("markdown-it-katex")], // 数学公式
-    [require("markdown-it-footnote")], // 脚注
-    [require("markdown-it-container")], // 自定义容器
+    [require("markdown-it-xxx")], //
   ],
 });
 ```
@@ -286,17 +225,6 @@ markdownTransformerPlugin({
 1. 在 `src/pages/` 添加新组件
 2. 在路由配置中注册
 3. 更新导航逻辑以支持新页面
-
-### 国际化支持
-
-项目结构已为国际化做好准备：
-
-```
-docs/
-├── zh/           # 中文文档
-├── en/           # 英文文档
-└── shared/       # 共享资源
-```
 
 ## 📦 构建与部署
 
@@ -322,7 +250,6 @@ pnpm preview
 
 ## 🔗 相关链接
 
+- **前端文档**：[../docs-site/README.md](../docs-site/README.md)
 - **后端 API 文档**：[../api-server/README.md](../api-server/README.md)
 - **项目总览**：[../../README.md](../../README.md)
-- **Vue 3 文档**：https://vuejs.org/
-- **Vite 插件开发**：https://vitejs.dev/guide/api-plugin.html

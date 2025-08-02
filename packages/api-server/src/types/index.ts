@@ -26,6 +26,12 @@ export interface CreateUserDto {
   password: string;
 }
 
+export interface RegisterDto {
+  email: string;
+  name?: string;
+  password: string;
+}
+
 export interface LoginDto {
   email: string;
   password: string;
@@ -33,6 +39,7 @@ export interface LoginDto {
 
 export interface CreatePostDto {
   title: string;
+  slug?: string;
   content: string;
   excerpt?: string;
   published?: boolean;
@@ -40,6 +47,7 @@ export interface CreatePostDto {
 
 export interface UpdatePostDto {
   title?: string;
+  slug?: string;
   content?: string;
   excerpt?: string;
   published?: boolean;
