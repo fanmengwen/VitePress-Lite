@@ -1,3 +1,10 @@
+---
+title: 【与 webpack 差异】
+date: "2025-07-22"
+author: "meng"
+tags: ["Vite", "Plugin", "Markdown"]
+---
+
 ## 与 webpack 差异
 
 （1）构建原理： Webpack 是一个静态模块打包器，通过对项目中的 JavaScript、CSS、图片等文件进行分析，生成对应的静态资源，并且可以通过一些插件和加载器来实现各种功能；Vite 则是一种基于浏览器原生 ES 模块解析的构建工具。

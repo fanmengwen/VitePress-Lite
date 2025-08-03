@@ -8,7 +8,6 @@ tags: ["Vite", "Plugin", "Markdown"]
 ### 1. 核心概念与定义型
 
 - **Q: 依赖预构建（Dependency Pre-bundling）是什么？解决了什么？**
-
   - **定义：** Vite 启动时用 esbuild 预处理 node_modules 依赖。
   - **解决：**
     1. 性能：合并依赖，减少 HTTP 请求瀑布流。
@@ -16,19 +15,16 @@ tags: ["Vite", "Plugin", "Markdown"]
   - **案例：** lodash-es 预构建后只需一次请求。
 
 - **Q: Vite 依赖预构建为何选用 esbuild？**
-
   - **原因：** esbuild 由 Go 编写，速度极快，冷启动时间大幅缩短。
   - **对比：** esbuild 比 Babel/Webpack 快 10-100 倍。
 
 - **Q: Vite HMR（热模块更新）为何更快？**
-
   - **机制：**
     1. 只定位变更模块，WebSocket 通知客户端。
     2. 客户端仅请求变更模块，无需全量重打包。
   - **比喻：** Vite HMR 像“精准快递”，Webpack HMR 像“重新搬家”。
 
 - **Q: index.html 在 Vite 项目中的作用？**
-
   - **入口：** index.html 定义模块依赖图起点，Vite 解析其中的 script 标签，按 import 链加载。
   - **区别：** 传统工具入口是 JS 文件，Vite 是 HTML 文件。
 
@@ -42,7 +38,6 @@ tags: ["Vite", "Plugin", "Markdown"]
 ### 3. 最佳实践与权衡型
 
 - **Q: 如何配置路径别名 @ 指向 src？**
-
   - **配置：**
     ```js
     // vite.config.js
@@ -58,7 +53,6 @@ tags: ["Vite", "Plugin", "Markdown"]
     ```
 
 - **Q: 如何配置代理解决跨域？**
-
   - **配置：**
     ```js
     // vite.config.js
@@ -76,7 +70,6 @@ tags: ["Vite", "Plugin", "Markdown"]
     ```
 
 - **Q: 哪些场景优先选 Webpack？**
-
   - 遗留项目深度依赖 CommonJS/Loader/插件。
   - 复杂微前端（Module Federation）。
   - 需支持 IE11 等极老浏览器。
@@ -93,7 +86,6 @@ tags: ["Vite", "Plugin", "Markdown"]
 ### 4. 生产陷阱与深度探究型
 
 - **Q: 按需编译导致的“请求瀑布流”问题及缓解？**
-
   - **原因：** 浏览器遇 import 就发请求，依赖链深时串行请求多。
   - **缓解：**
     1. 扁平化依赖，减少嵌套。
@@ -102,7 +94,6 @@ tags: ["Vite", "Plugin", "Markdown"]
     4. 提升本地硬件/网络。
 
 - **Q: 迁移大型 CommonJS 项目遇到的核心挑战？Vite 如何应对？**
-
   - **挑战：** CommonJS 动态 require，难以静态分析。
   - **Vite 方案：**
     1. 智能静态分析导出。
@@ -124,7 +115,6 @@ tags: ["Vite", "Plugin", "Markdown"]
 ### 5. 插件机制与生态补充
 
 - **Q: Vite 插件机制核心原理？**
-
   - **基于 Rollup 插件体系扩展，支持开发/构建阶段钩子。**
   - **常用钩子：**
     - `config`/`configResolved`：修改配置。
@@ -133,12 +123,10 @@ tags: ["Vite", "Plugin", "Markdown"]
   - **案例：** @vitejs/plugin-vue 实现 Vue 单文件组件支持。
 
 - **Q: 多页面应用（MPA）如何配置？**
-
   - **配置多个 HTML 入口，或用 vite-plugin-mpa 插件自动生成多入口。**
   - **注意：** 每个页面独立依赖图，避免全局污染。
 
 - **Q: 性能优化常见策略？**
-
   - 合理拆分 chunk，利用动态 import。
   - 配置 assetsInlineLimit（静态资源内联的限制大小），优化图片/字体加载。
   - 使用 CDN 加速依赖。
@@ -165,21 +153,18 @@ tags: ["Vite", "Plugin", "Markdown"]
 - **Q: Vite HMR 的底层机制？为何比 Webpack 更快？**
 
 - **答：**
-
   - 基于原生 ESM，变更时只推送受影响模块，客户端仅请求变更部分。
   - Webpack 需重建依赖图、重打包，Vite 只需“精准快递”。
 
 - **Q: Vite 配置 alias、proxy 时常见陷阱？**
 
 - **答：**
-
   - alias 路径需用绝对路径，避免相对路径导致解析异常。
   - proxy 的 rewrite 函数需正确处理路径前缀，避免接口 404。
 
 - **Q: Vite 插件开发的核心流程？与 Rollup 插件有何异同？**
 
 - **答：**
-
   - 基于 Rollup 插件体系，支持开发/构建阶段钩子（如 transform、handleHotUpdate）。
   - Vite 增加了 dev server 相关钩子，Rollup 仅构建相关。
 
