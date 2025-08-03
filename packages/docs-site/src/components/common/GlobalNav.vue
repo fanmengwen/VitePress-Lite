@@ -15,7 +15,7 @@
 </template>
 
 <script setup lang="ts">
-import router from '../../router'
+import router from "../../router";
 
 // 可以根据需要过滤或分组
 const visibleRoutes = router.options.routes;

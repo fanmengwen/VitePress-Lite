@@ -1,17 +1,17 @@
-import { prisma } from '../utils/db';
-import { hashPassword, comparePassword, generateToken } from '../utils/auth';
-import { createError } from '../middlewares/errorHandler';
-import { CreateUserDto, LoginDto, AuthUser } from '../types/index';
+import { prisma } from "../utils/db";
+import { hashPassword, comparePassword, generateToken } from "../utils/auth";
+import { createError } from "../middlewares/errorHandler";
+import { CreateUserDto, LoginDto, AuthUser } from "../types/index";
 
 export class AuthService {
   static async register(userData: CreateUserDto) {
     // 检查邮箱是否已存在
     const existingUser = await prisma.user.findUnique({
-      where: { email: userData.email }
+      where: { email: userData.email },
     });
 
     if (existingUser) {
-      throw createError('该邮箱已被注册', 409);
+      throw createError("该邮箱已被注册", 409);
     }
 
     // 哈希密码
@@ -22,49 +22,52 @@ export class AuthService {
       data: {
         email: userData.email,
         name: userData.name,
-        password: hashedPassword
+        password: hashedPassword,
       },
       select: {
         id: true,
         email: true,
         name: true,
-        createdAt: true
-      }
+        createdAt: true,
+      },
     });
 
     // 生成 JWT 令牌
     const token = generateToken({
       userId: user.id,
-      email: user.email
+      email: user.email,
     });
 
     return {
       user,
-      token
+      token,
     };
   }
 
   static async login(loginData: LoginDto) {
     // 查找用户
     const user = await prisma.user.findUnique({
-      where: { email: loginData.email }
+      where: { email: loginData.email },
     });
 
     if (!user) {
-      throw createError('邮箱或密码错误', 401);
+      throw createError("邮箱或密码错误", 401);
     }
 
     // 验证密码
-    const isValidPassword = await comparePassword(loginData.password, user.password);
+    const isValidPassword = await comparePassword(
+      loginData.password,
+      user.password,
+    );
 
     if (!isValidPassword) {
-      throw createError('邮箱或密码错误', 401);
+      throw createError("邮箱或密码错误", 401);
     }
 
     // 生成 JWT 令牌
     const token = generateToken({
       userId: user.id,
-      email: user.email
+      email: user.email,
     });
 
     return {
@@ -72,9 +75,9 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
       },
-      token
+      token,
     };
   }
 
@@ -84,18 +87,18 @@ export class AuthService {
       select: {
         id: true,
         email: true,
-        name: true
-      }
+        name: true,
+      },
     });
 
     if (!user) {
-      throw createError('用户不存在', 404);
+      throw createError("用户不存在", 404);
     }
 
     return {
       id: user.id,
       email: user.email,
-      name: user.name ?? undefined
+      name: user.name !== null ? user.name : undefined,
     };
   }
-} 
+}
