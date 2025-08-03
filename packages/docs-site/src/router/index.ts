@@ -1,16 +1,15 @@
 // src/router/index.js
 
-import { createRouter, createWebHistory } from 'vue-router';
+import { createRouter, createWebHistory } from "vue-router";
 
+import generatedRoutes from "virtual:pages";
 
-import generatedRoutes from 'virtual:pages';
-
-import IndexPage from '../pages/Index.vue';
+import IndexPage from "../pages/Index.vue";
 
 const staticRoutes = [
   {
-    path: '/',
-    title: 'Home',
+    path: "/",
+    title: "首页",
     component: IndexPage,
   },
   // { path: '/login', name: 'Login', component: () => import('../pages/Login.vue') },
@@ -19,7 +18,7 @@ const staticRoutes = [
 // 4. 合并静态路由和动态路由
 const allRoutes = [...staticRoutes, ...generatedRoutes];
 
-console.log('All combined routes:', allRoutes);
+console.log("All combined routes:", allRoutes);
 
 const router = createRouter({
   history: createWebHistory(),
