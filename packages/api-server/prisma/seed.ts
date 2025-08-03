@@ -1,30 +1,30 @@
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 开始播种数据库...');
+  console.log("🌱 开始播种数据库...");
 
   // 创建测试用户
-  const hashedPassword = await bcrypt.hash('123456', 12);
-  
+  const hashedPassword = await bcrypt.hash("123456", 12);
+
   const user = await prisma.user.upsert({
-    where: { email: 'test@example.com' },
+    where: { email: "test@example.com" },
     update: {},
     create: {
-      email: 'test@example.com',
-      name: '测试用户',
+      email: "test@example.com",
+      name: "测试用户",
       password: hashedPassword,
     },
   });
 
-  console.log('👤 创建用户:', user.email);
+  console.log("👤 创建用户:", user.email);
 
   // 创建测试文章
   const posts = [
     {
-      title: 'VitePress-Lite 项目介绍',
+      title: "VitePress-Lite 项目介绍",
       content: `# VitePress-Lite 项目介绍
 
 这是一个基于 Vue 3 + Vite 的轻量级文档站点生成器。
@@ -45,11 +45,11 @@ async function main() {
 - Express
 - Prisma
 - SQLite`,
-      excerpt: '一个现代化的文档站点生成器，支持热更新和自动路由生成。',
+      excerpt: "一个现代化的文档站点生成器，支持热更新和自动路由生成。",
       published: true,
     },
     {
-      title: 'API 接口设计说明',
+      title: "API 接口设计说明",
       content: `# API 接口设计说明
 
 本项目采用 RESTful API 设计风格，提供完整的用户认证和文章管理功能。
@@ -67,11 +67,11 @@ async function main() {
 - POST /api/posts - 创建文章
 - PUT /api/posts/:slug - 更新文章
 - DELETE /api/posts/:slug - 删除文章`,
-      excerpt: 'RESTful API 设计说明，包含完整的用户认证和文章管理功能。',
+      excerpt: "RESTful API 设计说明，包含完整的用户认证和文章管理功能。",
       published: true,
     },
     {
-      title: '开发环境配置指南',
+      title: "开发环境配置指南",
       content: `# 开发环境配置指南
 
 ## 环境要求
@@ -91,19 +91,19 @@ async function main() {
 
 - packages/docs-site - 前端文档站点
 - packages/api-server - 后端 API 服务`,
-      excerpt: '详细的开发环境配置指南，包含所有必要的安装和配置步骤。',
+      excerpt: "详细的开发环境配置指南，包含所有必要的安装和配置步骤。",
       published: false,
-    }
+    },
   ];
 
   for (const postData of posts) {
     const slug = postData.title
       .toLowerCase()
-      .replace(/[^a-z0-9\u4e00-\u9fa5\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
+      .replace(/[^a-z0-9\u4e00-\u9fa5\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
       .trim()
-      .replace(/^-|-$/g, '');
+      .replace(/^-|-$/g, "");
 
     const post = await prisma.post.upsert({
       where: { slug },
@@ -115,17 +115,17 @@ async function main() {
       },
     });
 
-    console.log('📝 创建文章:', post.title);
+    console.log("📝 创建文章:", post.title);
   }
 
-  console.log('✅ 数据库播种完成！');
+  console.log("✅ 数据库播种完成！");
 }
 
 main()
   .catch((e) => {
-    console.error('❌ 播种失败:', e);
+    console.error("❌ 播种失败:", e);
     process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();
-  }); 
+  });

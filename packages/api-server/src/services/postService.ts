@@ -1,7 +1,7 @@
-import { prisma } from '../utils/db';
-import { generateSlug } from '../utils/auth';
-import { createError } from '../middlewares/errorHandler';
-import { CreatePostDto, UpdatePostDto, Post } from '../types/index';
+import { prisma } from "../utils/db";
+import { generateSlug } from "../utils/auth";
+import { createError } from "../middlewares/errorHandler";
+import { CreatePostDto, UpdatePostDto, Post } from "../types/index";
 
 export class PostService {
   static async getAllPosts(includeUnpublished = false) {
@@ -19,13 +19,13 @@ export class PostService {
           select: {
             id: true,
             name: true,
-            email: true
-          }
-        }
+            email: true,
+          },
+        },
       },
       orderBy: {
-        createdAt: 'desc'
-      }
+        createdAt: "desc",
+      },
     });
 
     return posts;
@@ -47,14 +47,14 @@ export class PostService {
           select: {
             id: true,
             name: true,
-            email: true
-          }
-        }
-      }
+            email: true,
+          },
+        },
+      },
     });
 
     if (!post) {
-      throw createError('文章不存在', 404);
+      throw createError("文章不存在", 404);
     }
 
     return post;
@@ -62,14 +62,14 @@ export class PostService {
 
   static async createPost(postData: CreatePostDto, authorId: number) {
     const slug = generateSlug(postData.title);
-    
+
     // 检查 slug 是否已存在
     const existingPost = await prisma.post.findUnique({
-      where: { slug }
+      where: { slug },
     });
 
     if (existingPost) {
-      throw createError('该标题已存在，请修改标题', 409);
+      throw createError("该标题已存在，请修改标题", 409);
     }
 
     const post = await prisma.post.create({
@@ -78,8 +78,9 @@ export class PostService {
         slug,
         content: postData.content,
         excerpt: postData.excerpt,
-        published: postData.published ?? false,
-        authorId
+        published:
+          postData.published !== undefined ? postData.published : false,
+        authorId,
       },
       select: {
         id: true,
@@ -94,46 +95,50 @@ export class PostService {
           select: {
             id: true,
             name: true,
-            email: true
-          }
-        }
-      }
+            email: true,
+          },
+        },
+      },
     });
 
     return post;
   }
 
-  static async updatePost(slug: string, postData: UpdatePostDto, userId: number) {
+  static async updatePost(
+    slug: string,
+    postData: UpdatePostDto,
+    userId: number,
+  ) {
     // 查找文章并验证作者权限
     const existingPost = await prisma.post.findUnique({
       where: { slug },
       select: {
         id: true,
-        authorId: true
-      }
+        authorId: true,
+      },
     });
 
     if (!existingPost) {
-      throw createError('文章不存在', 404);
+      throw createError("文章不存在", 404);
     }
 
     if (existingPost.authorId !== userId) {
-      throw createError('您没有权限修改此文章', 403);
+      throw createError("您没有权限修改此文章", 403);
     }
 
     // 如果修改了标题，需要重新生成 slug
     let newSlug = slug;
     if (postData.title) {
       newSlug = generateSlug(postData.title);
-      
+
       // 如果新 slug 与原 slug 不同，检查是否已存在
       if (newSlug !== slug) {
         const slugExists = await prisma.post.findUnique({
-          where: { slug: newSlug }
+          where: { slug: newSlug },
         });
 
         if (slugExists) {
-          throw createError('该标题已存在，请修改标题', 409);
+          throw createError("该标题已存在，请修改标题", 409);
         }
       }
     }
@@ -144,7 +149,9 @@ export class PostService {
         ...(postData.title && { title: postData.title, slug: newSlug }),
         ...(postData.content !== undefined && { content: postData.content }),
         ...(postData.excerpt !== undefined && { excerpt: postData.excerpt }),
-        ...(postData.published !== undefined && { published: postData.published })
+        ...(postData.published !== undefined && {
+          published: postData.published,
+        }),
       },
       select: {
         id: true,
@@ -159,10 +166,10 @@ export class PostService {
           select: {
             id: true,
             name: true,
-            email: true
-          }
-        }
-      }
+            email: true,
+          },
+        },
+      },
     });
 
     return post;
@@ -175,20 +182,20 @@ export class PostService {
       select: {
         id: true,
         authorId: true,
-        title: true
-      }
+        title: true,
+      },
     });
 
     if (!existingPost) {
-      throw createError('文章不存在', 404);
+      throw createError("文章不存在", 404);
     }
 
     if (existingPost.authorId !== userId) {
-      throw createError('您没有权限删除此文章', 403);
+      throw createError("您没有权限删除此文章", 403);
     }
 
     await prisma.post.delete({
-      where: { slug }
+      where: { slug },
     });
 
     return { message: `文章 "${existingPost.title}" 已删除` };
@@ -204,13 +211,13 @@ export class PostService {
         excerpt: true,
         published: true,
         createdAt: true,
-        updatedAt: true
+        updatedAt: true,
       },
       orderBy: {
-        createdAt: 'desc'
-      }
+        createdAt: "desc",
+      },
     });
 
     return posts;
   }
-} 
+}
