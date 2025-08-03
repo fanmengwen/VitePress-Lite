@@ -39,11 +39,23 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      },
     },
-  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+    },
+  },
+  build: {
+    // 🚀 Tree Shaking优化
+    rollupOptions: {
+      external: ["fs", "path"], // 排除Node.js模块
+      output: {
+        manualChunks: {
+          "markdown-engine": ["markdown-it"],
+          "vue-core": ["vue", "vue-router"],
+        },
+      },
     },
   },
 });
