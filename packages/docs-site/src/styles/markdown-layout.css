@@ -1,0 +1,212 @@
+/* Markdown页面布局样式 - 所有markdown页面共享 */
+
+/* 文章头部样式 */
+.markdown-page .article-header {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 10px;
+  border-left: 4px solid #007acc;
+}
+
+.markdown-page .article-title {
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.markdown-page .article-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.markdown-page .article-info span {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 15px;
+  font-weight: 500;
+}
+
+.markdown-page .published-status.published {
+  color: #27ae60;
+  background: rgba(39, 174, 96, 0.1);
+}
+
+/* Loading和错误状态 */
+.markdown-page .loading-container, 
+.markdown-page .error-container {
+  text-align: center;
+  padding: 2rem;
+  margin: 1rem 0;
+}
+
+.markdown-page .loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e0e0e0;
+  border-top: 3px solid #007acc;
+  border-radius: 50%;
+  animation: markdown-spinner-spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes markdown-spinner-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.markdown-page .error-message {
+  color: #e74c3c;
+  margin-bottom: 1rem;
+}
+
+.markdown-page .retry-button {
+  background: #007acc;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.markdown-page .retry-button:hover {
+  background: #005fa3;
+}
+
+/* 文章底部样式 */
+.markdown-page .article-footer {
+  margin-top: 3rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-top: 2px solid #e9ecef;
+}
+
+.markdown-page .article-stats {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: #666;
+  flex-wrap: wrap;
+}
+
+.markdown-page .article-stats span {
+  padding: 0.25rem 0.5rem;
+  background: white;
+  border-radius: 12px;
+  font-family: 'Monaco', 'Consolas', monospace;
+}
+
+/* 内容容器样式 */
+.markdown-page .content-container {
+  margin: 2rem 0;
+  padding: 0 3rem;
+}
+
+.markdown-page .static-content {
+  margin-bottom: 2rem;
+}
+
+/* 内容区域样式 */
+.markdown-page .markdown-body {
+  line-height: 1.8;
+  color: #333;
+  font-size: 16px;
+  margin: 1rem 0;
+}
+
+.markdown-page .markdown-body h1, 
+.markdown-page .markdown-body h2, 
+.markdown-page .markdown-body h3 {
+  color: #2c3e50;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+.markdown-page .markdown-body p {
+  margin-bottom: 1rem;
+}
+
+.markdown-page .markdown-body pre {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.markdown-page .markdown-body code {
+  background: #f1f3f4;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Consolas', monospace;
+}
+
+/* 动态内容区域样式 */
+.markdown-page .api-content {
+  margin-top: 3rem;
+  border-top: 2px solid #e9ecef;
+  padding-top: 2rem;
+}
+
+.markdown-page .content-separator {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.markdown-page .content-separator h3 {
+  color: #007acc;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 0.8rem 1.5rem;
+  border-radius: 20px;
+  display: inline-block;
+  margin: 0;
+  font-size: 1.1rem;
+  box-shadow: 0 2px 8px rgba(0,122,204,0.1);
+}
+
+.markdown-page .api-markdown {
+  background: #fafbfc;
+  padding: 2rem;
+  border-radius: 12px;
+  border-left: 4px solid #007acc;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .markdown-page .article-title {
+    font-size: 1.5rem;
+  }
+  
+  .markdown-page .article-info {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .markdown-page .article-stats {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .markdown-page .markdown-body {
+    font-size: 15px;
+  }
+
+  .markdown-page .api-markdown {
+    padding: 1rem;
+  }
+
+  .markdown-page .content-separator h3 {
+    font-size: 1rem;
+    padding: 0.6rem 1.2rem;
+  }
+} 
