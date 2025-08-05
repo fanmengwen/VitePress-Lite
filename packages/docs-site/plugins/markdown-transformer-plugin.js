@@ -124,7 +124,7 @@ export default function markdownTransformerPlugin(options = {}) {
             // 生成与sync-docs.ts一致的slug
             return relativePath
               .toLowerCase()
-              .replace(new RegExp('\\s+', 'g'), '-') // 空格转横线
+              // .replace(new RegExp('\\s+', 'g'), '-') // 空格转横线
               .replace(new RegExp('[^a-z0-9\\u4e00-\\u9fa5/-]', 'g'), '') // 只保留字母、数字、中文、斜杠、横线
               .replace(new RegExp('/+', 'g'), '/') // 多个斜杠合并
               .replace(new RegExp('-+', 'g'), '-') // 多个横线合并
