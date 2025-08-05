@@ -4,17 +4,38 @@
     :to="linkTo"
     :href="linkHref"
     class="card"
-    :class="{ 'static-card': isStatic, 'dynamic-card': !isStatic }"
+    :class="{ 
+      'static-card': isStatic, 
+      'dynamic-card': !isStatic,
+      'has-image': cardImage
+    }"
   >
+    <!-- 卡片顶部装饰 -->
+    <div class="card-decoration" :style="{ background: decorationGradient }"></div>
+    
     <!-- 卡片头部 -->
     <div class="card-header">
-      <div class="title">
-        {{ cardIcon }} {{ displayTitle }}
-        <span v-if="post" class="data-indicator" title="已关联文章数据">✨</span>
+      <!-- 分类标签 -->
+      <div class="card-tags">
+        <span class="card-type-tag" :class="{ 'static-type': isStatic, 'dynamic-type': !isStatic }">
+          {{ cardTypeText }}
+        </span>
+        <span v-if="categoryTag" class="category-tag">
+          {{ categoryTag }}
+        </span>
+        <span v-if="post" class="status-tag published">
+          <span class="status-dot"></span>
+          已发布
+        </span>
       </div>
-      <div v-if="post" class="post-meta">
-        <span class="author">👤 {{ post.author.name || post.author.email }}</span>
-        <span class="date">📅 {{ formatDate(post.createdAt) }}</span>
+      
+      <!-- 标题和图标 -->
+      <div class="title-section">
+        <div class="card-icon">{{ cardIcon }}</div>
+        <h3 class="card-title">
+          {{ displayTitle }}
+          <span v-if="post" class="data-indicator" title="已关联文章数据">✨</span>
+        </h3>
       </div>
     </div>
 
@@ -23,15 +44,51 @@
       <div v-if="post" class="content-preview">
         {{ displayExcerpt }}
       </div>
-      <div v-else-if="isStatic" class="static-note">
-        📄 静态文档页面
+      <div v-else class="static-description">
+        <p>{{ getStaticDescription() }}</p>
       </div>
     </div>
 
-    <!-- 卡片底部信息 -->
-    <div v-if="post" class="card-footer">
-      <span class="published-status"> ✅ 已发布 </span>
-      <span class="updated-date"> 🔄 {{ formatDate(post.updatedAt) }} </span>
+    <!-- 卡片元信息 -->
+    <div class="card-meta">
+      <div v-if="post" class="meta-info">
+        <div class="meta-item">
+          <span class="meta-icon">👤</span>
+          <span class="meta-text">{{ post.author.name || post.author.email }}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-icon">📅</span>
+          <span class="meta-text">{{ formatDate(post.createdAt) }}</span>
+        </div>
+        <div v-if="post.updatedAt !== post.createdAt" class="meta-item">
+          <span class="meta-icon">🔄</span>
+          <span class="meta-text">{{ formatDate(post.updatedAt) }}</span>
+        </div>
+      </div>
+      <div v-else class="static-meta">
+        <div class="meta-item">
+          <span class="meta-icon">📄</span>
+          <span class="meta-text">静态文档</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-icon">🔗</span>
+          <span class="meta-text">{{ displayPath }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 卡片底部行动区域 -->
+    <div class="card-actions">
+      <div class="reading-info">
+        <span class="reading-time">
+          <span class="meta-icon">⏱️</span>
+          {{ estimatedReadingTime }}
+        </span>
+      </div>
+      <div class="action-button">
+        <span class="action-text">{{ isStatic ? '查看文档' : '阅读文章' }}</span>
+        <span class="action-arrow">→</span>
+      </div>
     </div>
   </component>
 </template>
@@ -90,8 +147,57 @@ const displayPath = computed(() => {
 
 // 卡片图标
 const cardIcon = computed(() => {
-  return props.isStatic ? "📘" : "📰";
+  if (props.isStatic) {
+    // 根据路径判断文档类型
+    const path = props.path || "";
+    if (path.includes("unit")) return "📖";
+    if (path.includes("total") || path.includes("overview")) return "📋";
+    if (path.includes("api")) return "🔧";
+    if (path.includes("guide")) return "📚";
+    return "📘";
+  }
+  return "📰";
 });
+
+// 卡片类型文本
+const cardTypeText = computed(() => {
+  return props.isStatic ? "文档" : "文章";
+});
+
+// 分类标签
+const categoryTag = computed(() => {
+  if (props.isStatic && props.path) {
+    const path = props.path;
+    if (path.includes("unit1")) return "Unit 1";
+    if (path.includes("unit2")) return "Unit 2";
+    if (path.includes("unit3")) return "Unit 3";
+    if (path.includes("total")) return "总览";
+    if (path.includes("api")) return "API";
+    if (path.includes("guide")) return "指南";
+  }
+  return null;
+});
+
+// 装饰渐变
+const decorationGradient = computed(() => {
+  if (props.isStatic) {
+    return "linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%)";
+  }
+  return "linear-gradient(135deg, var(--color-success) 0%, var(--color-info) 100%)";
+});
+
+// 获取静态描述
+const getStaticDescription = () => {
+  if (props.path) {
+    const path = props.path;
+    if (path.includes("unit1")) return "第一单元相关文档内容，包含基础概念和入门指南。";
+    if (path.includes("unit2")) return "第二单元相关文档内容，涵盖进阶功能和实践案例。";
+    if (path.includes("unit3")) return "第三单元相关文档内容，深入探讨高级特性和优化技巧。";
+    if (path.includes("total")) return "项目总览文档，包含完整的项目介绍和使用说明。";
+    if (path.includes("api")) return "API 文档，详细介绍各个接口的使用方法和参数。";
+  }
+  return "查看详细的文档内容和使用说明。";
+};
 
 // 显示文章摘要
 const displayExcerpt = computed(() => {
@@ -103,10 +209,27 @@ const displayExcerpt = computed(() => {
   }
   
   if (props.post.content) {
-    return truncateContent(props.post.content, 150);
+    return truncateContent(props.post.content, 120);
   }
   
   return "暂无简介...";
+});
+
+// 预估阅读时间
+const estimatedReadingTime = computed(() => {
+  if (props.post && props.post.content) {
+    const wordCount = props.post.content.length;
+    const readingSpeed = 300; // 每分钟阅读字数
+    const minutes = Math.ceil(wordCount / readingSpeed);
+    return `${minutes} 分钟阅读`;
+  }
+  return "2-5 分钟阅读";
+});
+
+// 卡片图片（预留功能）
+const cardImage = computed(() => {
+  // 可以根据内容或配置返回图片URL
+  return null;
 });
 
 // 格式化日期
@@ -128,54 +251,125 @@ const truncateContent = (content: string, maxLength = 120): string => {
 
 <style scoped>
 .card {
-  border: 1px solid #e0e0e0;
-  border-radius: 10px;
-  padding: 1rem;
-  background: #f9f9f9;
-  transition:
-    box-shadow 0.2s,
-    transform 0.2s;
-  text-decoration: none;
-  color: inherit;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  min-height: 140px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-2xl);
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+  transition: var(--transition-base);
+  box-shadow: var(--shadow-card);
+  min-height: 280px;
 }
 
 .card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--color-primary-100);
+}
+
+.card:active {
   transform: translateY(-2px);
 }
 
-/* 静态卡片样式 */
-.static-card {
-  border-left: 4px solid #3498db;
+/* 卡片装饰条 */
+.card-decoration {
+  height: 4px;
+  width: 100%;
+  background: var(--color-primary);
 }
 
-/* 动态卡片样式 */
-.dynamic-card {
-  border-left: 4px solid #e74c3c;
-  background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+.static-card .card-decoration {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+}
+
+.dynamic-card .card-decoration {
+  background: linear-gradient(135deg, var(--color-success) 0%, var(--color-info) 100%);
 }
 
 /* 卡片头部 */
 .card-header {
-  flex-shrink: 0;
+  padding: var(--spacing-xl) var(--spacing-xl) var(--spacing-lg);
 }
 
-.title {
-  font-size: 1.1rem;
-  font-weight: bold;
-  margin-bottom: 0.5rem;
-  line-height: 1.3;
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+}
+
+.card-type-tag,
+.category-tag,
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.card-type-tag.static-type {
+  background: var(--color-primary-100);
+  color: var(--color-primary-dark);
+}
+
+.card-type-tag.dynamic-type {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--color-success);
+}
+
+.category-tag {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border-light);
+}
+
+.status-tag.published {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--color-success);
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.title-section {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+}
+
+.card-icon {
+  font-size: var(--font-size-2xl);
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: var(--spacing-xs);
+}
+
+.card-title {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  line-height: var(--line-height-tight);
+  margin: 0;
+  color: var(--color-text-primary);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--spacing-sm);
 }
 
 .data-indicator {
-  font-size: 0.8rem;
+  font-size: var(--font-size-sm);
   animation: sparkle 2s ease-in-out infinite;
 }
 
@@ -184,97 +378,158 @@ const truncateContent = (content: string, maxLength = 120): string => {
   50% { opacity: 1; }
 }
 
-.post-meta {
-  display: flex;
-  gap: 1rem;
-  font-size: 0.8rem;
-  color: #666;
-  flex-wrap: wrap;
-}
-
-.author,
-.date {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
 /* 卡片内容 */
 .card-content {
   flex: 1;
+  padding: 0 var(--spacing-xl) var(--spacing-lg);
+}
+
+.content-preview,
+.static-description {
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
+}
+
+.static-description p {
+  margin: 0;
+}
+
+/* 卡片元信息 */
+.card-meta {
+  padding: 0 var(--spacing-xl) var(--spacing-lg);
+}
+
+.meta-info,
+.static-meta {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-/* 内容预览样式 */
-.content-preview {
-  font-size: 0.9rem;
-  color: #666;
-  line-height: 1.4;
-  margin-bottom: 0.5rem;
-}
-
-/* 静态文档提示 */
-.static-note {
-  font-size: 0.85rem;
-  color: #888;
-  font-style: italic;
-  padding: 0.5rem;
-  background: #f5f5f5;
-  border-radius: 4px;
-  text-align: center;
-}
-
-.content-preview {
-  font-size: 0.9rem;
-  color: #555;
-  line-height: 1.4;
-  flex: 1;
-}
-
-.path {
-  color: #888;
-  font-size: 0.875rem;
-  font-family: "Monaco", "Consolas", monospace;
-  background: rgba(0, 0, 0, 0.05);
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  align-self: flex-start;
-}
-
-/* 卡片底部 */
-.card-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.75rem;
-  color: #777;
-  padding-top: 0.5rem;
-  border-top: 1px solid #e8e8e8;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--spacing-lg);
 }
 
-.published-status {
-  color: #27ae60;
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+.meta-icon {
+  font-size: var(--font-size-sm);
+  opacity: 0.8;
+}
+
+.meta-text {
   font-weight: 500;
 }
 
-.updated-date {
-  color: #888;
+/* 卡片行动区域 */
+.card-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-lg) var(--spacing-xl);
+  background: var(--color-bg-secondary);
+  border-top: 1px solid var(--color-border-light);
+  margin-top: auto;
+}
+
+.reading-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.reading-time {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.action-button {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-primary);
+  transition: var(--transition-base);
+}
+
+.card:hover .action-button {
+  color: var(--color-primary-dark);
+}
+
+.action-arrow {
+  transition: var(--transition-base);
+}
+
+.card:hover .action-arrow {
+  transform: translateX(4px);
 }
 
 /* 响应式设计 */
 @media (max-width: 640px) {
-  .post-meta {
-    flex-direction: column;
-    gap: 0.25rem;
+  .card-header {
+    padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-md);
   }
 
-  .card-footer {
+  .card-content,
+  .card-meta {
+    padding-left: var(--spacing-lg);
+    padding-right: var(--spacing-lg);
+  }
+
+  .card-actions {
+    padding: var(--spacing-md) var(--spacing-lg);
     flex-direction: column;
+    gap: var(--spacing-md);
     align-items: flex-start;
+  }
+
+  .meta-info,
+  .static-meta {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .card-title {
+    font-size: var(--font-size-lg);
+  }
+
+  .title-section {
+    gap: var(--spacing-sm);
+  }
+
+  .card-icon {
+    font-size: var(--font-size-xl);
+  }
+}
+
+/* 可访问性增强 */
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .action-arrow,
+  .data-indicator {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* 焦点状态 */
+.card:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* 不同主题下的微调 */
+@media (prefers-color-scheme: dark) {
+  .card-actions {
+    background: var(--color-bg-tertiary);
   }
 }
 </style>
