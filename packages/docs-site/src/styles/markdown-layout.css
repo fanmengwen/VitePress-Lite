@@ -4,8 +4,11 @@
 .markdown-page {
   max-width: var(--container-content);
   margin: 0 auto;
-  padding: 0 var(--spacing-lg);
+  margin-top: 64px;
+  padding:var(--spacing-md) calc(var(--spacing-lg) * 2);
   background-color: var(--color-bg-primary);
+  border-radius: var(--radius-2xl);
+  min-height: calc(100vh - 64px);
 }
 
 /* === 文章头部样式 === */

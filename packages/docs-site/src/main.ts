@@ -1,6 +1,8 @@
 // src/main.js
 import { createApp } from 'vue'
 import './style.css'
+import "./styles/markdown-layout.css"; // 导入markdown布局样式
+
 import App from './App.vue'
 import router from './router'
 import { setupCodeBlockCopy } from './utils/codeBlockCopy'

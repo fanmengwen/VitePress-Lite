@@ -178,7 +178,6 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   outline: none;
-  position: relative;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
@@ -210,8 +209,6 @@ onUnmounted(() => {
 /* 进度环样式 */
 .progress-ring {
   position: absolute;
-  top: 4px;
-  left: 4px;
   width: 48px;
   height: 48px;
   pointer-events: none;

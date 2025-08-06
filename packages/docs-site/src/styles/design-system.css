@@ -69,7 +69,7 @@
   --container-md: 768px;
   --container-lg: 1024px;
   --container-xl: 1280px;
-  --container-content: 800px; /* 内容版心 */
+  --container-content: 1024px; /* 内容版心 */
   
   /* === 圆角系统 === */
   --radius-sm: 0.25rem;    /* 4px */
@@ -89,7 +89,7 @@
   
   /* === 过渡动画 === */
   --transition-fast: 0.15s ease-out;
-  --transition-base: 0.25s ease-out;
+  --transition-base: 0.20s ease-out;
   --transition-slow: 0.35s ease-out;
   
   /* === Z-index 层级 === */
@@ -128,6 +128,14 @@
   padding: 0 var(--spacing-lg);
 }
 
+html, body {
+  width: 100%; 
+  height: 100%; 
+  position: fixed;
+  top:0;
+  left:0;
+  overflow: scroll;
+}
 .text-center { text-align: center; }
 .text-left { text-align: left; }
 .text-right { text-align: right; }
