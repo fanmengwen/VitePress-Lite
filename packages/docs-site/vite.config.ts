@@ -39,8 +39,18 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      "/api/chat": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/api/vector-store": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        secure: false,
       },
     },
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -55,7 +65,16 @@ export default defineConfig({
           "markdown-engine": ["markdown-it"],
           "vue-core": ["vue", "vue-router"],
         },
+        // CSS优化：将所有CSS合并到单个文件中
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name?.endsWith('.css')) {
+            return 'assets/styles-[hash].css';
+          }
+          return 'assets/[name]-[hash][extname]';
+        },
       },
     },
+    // CSS配置优化
+    cssCodeSplit: false, // 关闭CSS代码分割，将所有CSS打包到一个文件
   },
 });

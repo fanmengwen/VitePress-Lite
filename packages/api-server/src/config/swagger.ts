@@ -11,7 +11,6 @@ const options: Options = {
       description: '基于 Node.js + Express + Prisma 的现代化 API 服务，为文档站点提供用户认证和内容管理功能',
       contact: {
         name: 'API Support',
-        email: 'support@vitepress-lite.com'
       },
       license: {
         name: 'MIT',
@@ -23,10 +22,6 @@ const options: Options = {
         url: 'http://localhost:3001/api',
         description: '开发环境'
       },
-      {
-        url: 'https://api.vitepress-lite.com/api',
-        description: '生产环境'
-      }
     ],
     components: {
       securitySchemes: {
