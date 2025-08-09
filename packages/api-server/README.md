@@ -9,10 +9,8 @@
 
 本 API 服务器实现了完整的后端功能，支持：
 
-- **用户认证系统**：注册、登录、JWT 令牌验证
 - **文章管理**：CRUD 操作、发布状态控制、作者关联
 - **数据同步**：Markdown 文件到数据库的自动同步
-- **混合架构支持**：为前端提供动态元数据补充
 - **交互式API文档**：基于 Swagger/OpenAPI 的完整 API 文档
 - **灵活数据库支持**：开发环境 SQLite，生产环境 PostgreSQL
 
@@ -72,7 +70,6 @@ npm run dev
 - **认证**：JWT + bcryptjs 密码哈希
 - **API文档**：Swagger UI + OpenAPI 3.0
 - **容器化**：Docker + Docker Compose (PostgreSQL)
-- **测试**：Jest + Supertest
 - **开发工具**：tsx (TypeScript 执行) + ts-node-dev
 
 ### 分层架构
