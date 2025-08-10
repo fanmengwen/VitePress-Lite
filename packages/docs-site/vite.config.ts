@@ -34,11 +34,7 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/api": {
-        target: "http://localhost:3001",
-        changeOrigin: true,
-        secure: false,
-      },
+      // AI service endpoints - 更具体的规则放在前面
       "/api/chat": {
         target: "http://localhost:8000",
         changeOrigin: true,
@@ -46,6 +42,22 @@ export default defineConfig({
       },
       "/api/vector-store": {
         target: "http://localhost:8000",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/health": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/system-info": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        secure: false,
+      },
+      // API server endpoints - 通用规则放在后面
+      "/api": {
+        target: "http://localhost:3001",
         changeOrigin: true,
         secure: false,
       },
