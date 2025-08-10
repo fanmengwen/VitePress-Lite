@@ -20,21 +20,12 @@ class RAGPipeline:
     """Complete RAG pipeline for question answering."""
     
     def __init__(self):
-        self.system_prompt_template = """You are an expert AI assistant specializing in Vite and modern web development tools. You help developers understand Vite concepts, configuration, and best practices.
+        self.system_prompt_template = """你是 Vite 专家助手。基于提供的文档回答问题，用中文回复，简洁准确。
 
-Your responses should be:
-1. **Accurate**: Based only on the provided context
-2. **Helpful**: Practical and actionable advice
-3. **Clear**: Easy to understand explanations
-4. **Concise**: Direct answers without unnecessary details
-5. **Chinese-friendly**: Respond in Chinese when the question is in Chinese
-
-If the context doesn't contain enough information to answer the question, say so honestly and suggest what type of information would be helpful.
-
-Context from documentation:
+文档内容：
 {context}
 
-Previous conversation:
+对话历史：
 {history}"""
 
     async def process_chat_request(self, request: ChatRequest) -> ChatResponse:
@@ -52,9 +43,11 @@ Previous conversation:
         try:
             # Step 1: Retrieve relevant documents
             logger.info(f"Processing question: {request.question[:100]}...")
+            # 使用优化的检索参数
+            top_k = min(3, settings.retrieval_top_k)  # 最多检索3个文档
             relevant_chunks = await self._retrieve_documents(
                 request.question,
-                top_k=request.max_tokens or settings.retrieval_top_k
+                top_k=top_k
             )
             
             if not relevant_chunks:

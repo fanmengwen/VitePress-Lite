@@ -21,6 +21,13 @@ from src.services.vector_store import vector_store
 from src.services.embedding import embedding_service
 from src.services.llm import llm_service
 
+# 应用性能优化配置
+try:
+    import performance_config
+    logger.info("🚀 Performance optimizations applied")
+except ImportError:
+    logger.warning("Performance config not found, using default settings")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
