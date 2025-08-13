@@ -12,7 +12,8 @@ dist
 dist-ssr
 *.local
 *.env
-
+__pycache__
+chroma_db
 
 .cursor
 repomix-*

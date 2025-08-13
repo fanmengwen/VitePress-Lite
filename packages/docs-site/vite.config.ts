@@ -34,13 +34,35 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
+      // AI service endpoints - 更具体的规则放在前面
+      "/api/chat": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/api/vector-store": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/health": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/system-info": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        secure: false,
+      },
+      // API server endpoints - 通用规则放在后面
       "/api": {
         target: "http://localhost:3001",
         changeOrigin: true,
         secure: false,
       },
-      },
     },
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -55,7 +77,16 @@ export default defineConfig({
           "markdown-engine": ["markdown-it"],
           "vue-core": ["vue", "vue-router"],
         },
+        // CSS优化：将所有CSS合并到单个文件中
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name?.endsWith('.css')) {
+            return 'assets/styles-[hash].css';
+          }
+          return 'assets/[name]-[hash][extname]';
+        },
       },
     },
+    // CSS配置优化
+    cssCodeSplit: false, // 关闭CSS代码分割，将所有CSS打包到一个文件
   },
 });

@@ -191,6 +191,21 @@ export const api = {
   getPosts: () => apiClient.getPosts(),
   getPost: (slug: string) => apiClient.getPost(slug),
   createPost: (data: CreatePostRequest) => apiClient.createPost(data),
+
+  // AI - convenience function for asking AI questions
+  askAI: async (question: string, options?: { 
+    history?: any[]; 
+    includeSources?: boolean; 
+    temperature?: number 
+  }) => {
+    const { aiApiClient } = await import('./ai');
+    return aiApiClient.chat({
+      question,
+      history: options?.history || [],
+      include_sources: options?.includeSources ?? true,
+      temperature: options?.temperature ?? 0.1,
+    });
+  },
 };
 
 export default apiClient;
