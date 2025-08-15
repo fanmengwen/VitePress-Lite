@@ -10,10 +10,19 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+dist-prerender
+
 *.local
 *.env
 __pycache__
 chroma_db
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Package lock files (keep pnpm-lock.yaml only)
+package-lock.json
+yarn.lock
 
 .cursor
 repomix-*
