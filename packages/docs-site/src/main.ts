@@ -1,6 +1,7 @@
 // src/main.js
-import { createApp } from 'vue'
 import './style.css'
+import { createApp } from "vue";
+import { createHead } from '@unhead/vue';
 import "./styles/markdown-layout.css"; // 导入markdown布局样式
 
 import App from './App.vue'
@@ -9,14 +10,6 @@ import { setupCodeBlockCopy } from './utils/codeBlockCopy'
 
 const app = createApp(App)
 
-app.use(router)
-
-app.mount('#app')
-
-// 初始化代码复制功能
-document.addEventListener('DOMContentLoaded', () => {
-  setupCodeBlockCopy()
-})
 
 // 路由切换时重新初始化代码复制功能
 router.afterEach(() => {
@@ -24,4 +17,15 @@ router.afterEach(() => {
   setTimeout(() => {
     setupCodeBlockCopy()
   }, 100)
+})
+const head = createHead();
+
+app.use(router);
+app.use(head);
+app.mount("#app");
+
+
+// 初始化代码复制功能
+document.addEventListener('DOMContentLoaded', () => {
+  setupCodeBlockCopy()
 })

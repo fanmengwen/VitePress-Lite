@@ -1,5 +1,6 @@
 import { ref, onMounted, type Ref } from "vue";
 import { api, type Post, type ApiResponse } from "@/api";
+import { shouldSkipApiRequests, getEnvironmentType } from "@/utils/environment";
 
 export interface PostsState {
   posts: Ref<Post[]>;
@@ -14,6 +15,15 @@ export function usePostsData(): PostsState {
   const error = ref<string | null>(null);
 
   const fetchPosts = async (): Promise<void> => {
+    // 如果是预渲染环境或静态托管，跳过API请求
+    if (shouldSkipApiRequests()) {
+      console.log(`📄 ${getEnvironmentType()}环境检测到，跳过API请求`);
+      posts.value = [];
+      loading.value = false;
+      error.value = null;
+      return;
+    }
+
     loading.value = true;
     error.value = null;
 

@@ -115,6 +115,18 @@ class ApiClient {
 
   // Health check
   async healthCheck(): Promise<ApiResponse> {
+    // 导入环境检测（动态导入避免循环依赖）
+    const { shouldSkipApiRequests } = await import("@/utils/environment");
+    
+    if (shouldSkipApiRequests()) {
+      console.log("📄 静态环境，跳过health检查");
+      return {
+        success: true,
+        message: "Static environment, API check skipped",
+        data: { status: "static" }
+      };
+    }
+    
     const response = await this.client.get("/health");
     return response.data;
   }
@@ -148,6 +160,18 @@ class ApiClient {
 
   // Posts methods
   async getPosts(): Promise<ApiResponse<{ posts: Post[] }>> {
+    // 导入环境检测（动态导入避免循环依赖）
+    const { shouldSkipApiRequests } = await import("@/utils/environment");
+    
+    if (shouldSkipApiRequests()) {
+      console.log("📄 静态环境，跳过posts请求");
+      return {
+        success: true,
+        message: "Static environment, posts API skipped",
+        data: { posts: [] }
+      };
+    }
+    
     const response = await this.client.get("/posts");
     return response.data;
   }
