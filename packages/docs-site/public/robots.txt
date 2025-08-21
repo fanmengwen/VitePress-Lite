@@ -1,0 +1,29 @@
+User-agent: *
+Allow: /
+
+# 禁止访问临时文件和系统文件
+Disallow: /tmp/
+Disallow: /.git/
+Disallow: /node_modules/
+Disallow: /dist/
+Disallow: /src/
+
+# 禁止访问私有API端点
+Disallow: /api/auth/
+Disallow: /api/admin/
+
+# 站点地图位置
+Sitemap: https://your-domain.com/sitemap.xml
+
+# 爬取延迟（秒）
+Crawl-delay: 1
+
+# 针对特定搜索引擎的优化
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Slurp
+Allow: /

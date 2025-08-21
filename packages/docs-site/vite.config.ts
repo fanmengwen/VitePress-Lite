@@ -89,4 +89,7 @@ export default defineConfig({
     // CSS配置优化
     cssCodeSplit: false, // 关闭CSS代码分割，将所有CSS打包到一个文件
   },
+  
+  // 公共文件处理 - 将public目录的文件复制到构建输出
+  publicDir: "public",
 });
