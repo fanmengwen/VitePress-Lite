@@ -202,7 +202,8 @@ async function syncDocsToDatabase(): Promise<SyncResult> {
 
   try {
     // 扫描docs目录下的所有Markdown文件
-    const docsPath = resolve(process.cwd(), "../docs-site/docs");
+    const docsPath = resolve(process.cwd(), "../../docs");
+    console.log("🚀 ~ syncDocsToDatabase ~ docsPath:", docsPath)
     const pattern = `${docsPath}/**/*.md`;
 
     console.log(`📂 扫描目录: ${docsPath}`);

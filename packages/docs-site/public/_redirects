@@ -1,0 +1,12 @@
+# Netlify redirects file
+# Handle SPA routing - redirect all non-existent paths to index.html
+/*    /index.html   200
+
+# API routes should not be redirected
+/api/*  /api/:splat  200
+
+# Health check
+/health  /health  200
+
+# System info
+/system-info  /system-info  200

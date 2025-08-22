@@ -16,16 +16,19 @@ const __dirname = dirname(__filename);
 async function loadSidebarConfig() {
   try {
     // 动态导入配置文件（ES模块方式）
-    const configPath = join(__dirname, '../sidebar.config.js');
-    const configModule = await import(configPath + '?t=' + Date.now()); // 添加时间戳避免缓存
+    const configPath = join(__dirname, "../sidebar.config.js");
+    const configModule = await import(configPath + "?t=" + Date.now()); // 添加时间戳避免缓存
     return configModule.default || {};
   } catch (error) {
-    console.warn('Failed to load sidebar.config.js, using default configuration:', error.message);
+    console.warn(
+      "Failed to load sidebar.config.js, using default configuration:",
+      error.message
+    );
     return {
       directoryTitles: {},
       fileTitles: {},
       sortRules: { order: [] },
-      displayOptions: { hidden: [] }
+      displayOptions: { hidden: [] },
     };
   }
 }
@@ -40,15 +43,13 @@ async function loadSidebarConfig() {
  */
 function getMappedTitle(path, originalTitle, config, isDirectory = false) {
   // 移除docs/前缀和.md后缀，标准化路径
-  const normalizedPath = path
-    .replace(/^docs\//, '')
-    .replace(/\.md$/, '');
+  const normalizedPath = path.replace(/^.*\/docs\//, "").replace(/\.md$/, "");
 
   // 优先级：文件标题映射 > 目录标题映射 > frontmatter标题 > 文件名
   if (!isDirectory && config.fileTitles?.[normalizedPath]) {
     return config.fileTitles[normalizedPath];
   }
-  
+
   if (isDirectory && config.directoryTitles?.[normalizedPath]) {
     return config.directoryTitles[normalizedPath];
   }
@@ -63,12 +64,15 @@ function getMappedTitle(path, originalTitle, config, isDirectory = false) {
  * @returns {boolean} 是否隐藏
  */
 function shouldHidePath(path, config) {
-  const normalizedPath = path.replace(/^docs\//, '').replace(/\.md$/, '');
+  const normalizedPath = path.replace(/^.*\/docs\//, "").replace(/\.md$/, "");
   const hidden = config.displayOptions?.hidden || [];
-  
-  return hidden.some(hiddenPath => {
+
+  return hidden.some((hiddenPath) => {
     // 支持精确匹配和前缀匹配
-    return normalizedPath === hiddenPath || normalizedPath.startsWith(hiddenPath + '/');
+    return (
+      normalizedPath === hiddenPath ||
+      normalizedPath.startsWith(hiddenPath + "/")
+    );
   });
 }
 
@@ -79,17 +83,17 @@ function shouldHidePath(path, config) {
  * @param {string} parentPath - 父路径，用于获取对应的排序规则
  * @returns {Array} 排序后的路由数组
  */
-function sortRoutesByConfig(routes, config, parentPath = '') {
+function sortRoutesByConfig(routes, config, parentPath = "") {
   if (!config.sortRules) return routes;
 
   // 获取排序规则
   let sortOrder = [];
-  if (parentPath === '') {
+  if (parentPath === "") {
     // 根级别排序
     sortOrder = config.sortRules.order || [];
   } else {
     // 子目录排序
-    const parentKey = parentPath.replace(/^\//, '').replace(/\/$/, '');
+    const parentKey = parentPath.replace(/^\//, "").replace(/\/$/, "");
     sortOrder = config.sortRules[parentKey] || [];
   }
 
@@ -97,30 +101,30 @@ function sortRoutesByConfig(routes, config, parentPath = '') {
 
   // 按配置顺序排序
   return routes.sort((a, b) => {
-    const aKey = a.path.split('/').pop();
-    const bKey = b.path.split('/').pop();
-    
+    const aKey = a.path.split("/").pop();
+    const bKey = b.path.split("/").pop();
+
     const aIndex = sortOrder.indexOf(aKey);
     const bIndex = sortOrder.indexOf(bKey);
-    
+
     // 如果都在排序规则中，按规则排序
     if (aIndex !== -1 && bIndex !== -1) {
       return aIndex - bIndex;
     }
-    
+
     // 在排序规则中的排在前面
     if (aIndex !== -1) return -1;
     if (bIndex !== -1) return 1;
-    
+
     // 都不在排序规则中，保持字母顺序
     return aKey.localeCompare(bKey);
   });
 }
 
 function pathToRoutePath(path) {
-  // 传入的 path 例子: 'docs/guide/installation.md'
+  // 传入的 path 例子: '../../../docs/guide/installation.md'
   const routePath = path
-    .replace(/^docs\//, "") // -> 'guide/installation.md'
+    .replace(/^.*\/docs\//, "") // -> 'guide/installation.md'
     .replace(/\.md$/, "") // -> 'guide/installation'
     .replace(/index$/, "") // 对于 'guide/installation' -> 不变
     // 对于 'guide/index' -> 'guide/'
@@ -139,17 +143,17 @@ function buildRouteTree(pages, config) {
   const tree = {};
 
   // 过滤隐藏的文件
-  const visiblePages = pages.filter(page => !shouldHidePath(page, config));
+  const visiblePages = pages.filter((page) => !shouldHidePath(page, config));
 
   visiblePages.forEach((page) => {
     // 移除 docs/ 前缀并分割路径
-    const pathWithoutDocs = page.replace(/^docs\//, "");
+    const pathWithoutDocs = page.replace(/^.*\/docs\//, "");
     const pathSegments = pathWithoutDocs.split("/");
-    
+
     // 读取文件内容并解析标题
     let title = pathWithoutDocs.replace(/\.md$/, "");
     try {
-      const fileContent = readFileSync(page, 'utf-8');
+      const fileContent = readFileSync(page, "utf-8");
       const { data } = matter(fileContent);
       if (data.title) {
         title = data.title;
@@ -166,26 +170,31 @@ function buildRouteTree(pages, config) {
       path: pathToRoutePath(page),
       title: mappedTitle,
       component: `() => import('/${page}')`,
-      isFile: true
+      isFile: true,
     };
 
     // 逐级构建树结构
     let currentNode = tree;
-    
+
     // 处理除了最后一个段（文件名）之外的所有路径段
     for (let i = 0; i < pathSegments.length - 1; i++) {
       const segment = pathSegments[i];
-      
+
       if (!currentNode[segment]) {
         // 构建目录路径用于标题映射
-        const directoryPath = `docs/${pathSegments.slice(0, i + 1).join('/')}`;
-        const mappedDirectoryTitle = getMappedTitle(directoryPath, segment, config, true);
-        
+        const directoryPath = `docs/${pathSegments.slice(0, i + 1).join("/")}`;
+        const mappedDirectoryTitle = getMappedTitle(
+          directoryPath,
+          segment,
+          config,
+          true
+        );
+
         currentNode[segment] = {
           isFile: false,
           children: {},
           title: mappedDirectoryTitle,
-          path: `/${pathSegments.slice(0, i + 1).join('/')}`
+          path: `/${pathSegments.slice(0, i + 1).join("/")}`,
         };
       }
       currentNode = currentNode[segment].children;
@@ -209,30 +218,34 @@ function buildRouteTree(pages, config) {
 function convertTreeToNestedRoutes(treeNode, config, parentPath = "") {
   const routes = [];
 
-  Object.keys(treeNode).forEach(key => {
+  Object.keys(treeNode).forEach((key) => {
     const node = treeNode[key];
-    
+
     if (node.isFile) {
       // 这是一个文件节点，直接创建路由
       routes.push({
         path: node.path,
         title: node.title,
-        component: node.component
+        component: node.component,
       });
     } else {
       // 这是一个目录节点，需要递归处理其子节点
-      const children = convertTreeToNestedRoutes(node.children, config, node.path);
-      
+      const children = convertTreeToNestedRoutes(
+        node.children,
+        config,
+        node.path
+      );
+
       if (children.length > 0) {
         // 对子路由进行排序
         const sortedChildren = sortRoutesByConfig(children, config, node.path);
-        
+
         routes.push({
           path: node.path,
           title: node.title,
           children: sortedChildren,
           // 目录本身可能需要一个默认组件或重定向
-          redirect: sortedChildren[0]?.path
+          redirect: sortedChildren[0]?.path,
         });
       }
     }
@@ -264,10 +277,12 @@ export default function virtualPagesPlugin() {
           const config = await loadSidebarConfig();
 
           // 2. 扫描文件
-          const pages = await glob("docs/**/*.md");
+
+          const pages = await glob("../../docs/**/*.md", { posix: true });
 
           // 3. 构建路由树（集成配置文件）
           const routeTree = buildRouteTree(pages, config);
+          console.log("🚀 ~ load ~ routeTree:", routeTree);
 
           // 4. 转换为嵌套路由数组
           const routes = convertTreeToNestedRoutes(routeTree, config);
@@ -275,26 +290,26 @@ export default function virtualPagesPlugin() {
           // 5. 生成最终代码
           const routesCode = JSON.stringify(routes, null, 2).replace(
             /"component": "(\(\) => import\('.*?'\))"/g,
-            '"component": $1',
+            '"component": $1'
           );
 
           return `export default ${routesCode}`;
         } catch (error) {
-          console.error('Error in virtual-pages-plugin:', error);
+          console.error("Error in virtual-pages-plugin:", error);
           // 返回空路由数组，避免应用崩溃
-          return 'export default []';
+          return "export default []";
         }
       }
     },
 
     // 监听配置文件变化，触发重新构建
     configureServer(server) {
-      const configPath = join(__dirname, '../sidebar.config.js');
+      const configPath = join(__dirname, "../sidebar.config.js");
       server.watcher.add(configPath);
-      
-      server.watcher.on('change', (path) => {
+
+      server.watcher.on("change", (path) => {
         if (path === configPath) {
-          console.log('Sidebar config changed, rebuilding virtual pages...');
+          console.log("Sidebar config changed, rebuilding virtual pages...");
           // 清除模块缓存
           const mod = server.moduleGraph.getModuleById(resolvedVirtualId);
           if (mod) {
@@ -302,6 +317,6 @@ export default function virtualPagesPlugin() {
           }
         }
       });
-    }
+    },
   };
 }

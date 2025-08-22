@@ -335,4 +335,3 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const tester = new SEOTester();
   tester.generateReport().catch(console.error);
 }
-

@@ -516,7 +516,7 @@ pnpm db:sync
 
 **同步脚本功能**：
 
-- 扫描 `../docs-site/docs/**/*.md` 文件
+- 扫描 `../../docs/**/*.md` 文件
 - 解析 frontmatter 元数据
 - 智能生成 slug（支持中文和嵌套路径）
 - 使用 upsert 操作保证幂等性

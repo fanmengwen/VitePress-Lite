@@ -25,6 +25,9 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  /* 确保可以正常滚动 */
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* 链接样式 */
@@ -215,12 +218,17 @@ tr:hover {
 #app {
   min-height: 100vh;
   background-color: var(--color-bg-primary);
+  /* 确保应用容器不限制滚动 */
+  position: relative;
+  overflow: visible;
 }
 
 /* 主容器 */
 main {
   min-height: 100vh;
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  /* 确保主容器允许正常的内容流和滚动 */
+  position: relative;
 }
 
 /* 确保深色模式的背景也是渐变的 */

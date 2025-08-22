@@ -152,7 +152,7 @@ PYTHONPATH=. python scripts/ingest.py
 python scripts/ingest.py --clear
 
 # 仅处理指定文件
-python scripts/ingest.py --file ../docs-site/docs/unit/unit1.md
+python scripts/ingest.py --file ../docs/unit/unit1.md
 
 # 输出详细日志
 python scripts/ingest.py --verbose
@@ -377,7 +377,7 @@ CHUNK_OVERLAP = '100'          # 块重叠大小
 
 ```bash
 # 检查文档路径
-ls -la ../docs-site/docs/
+ls -la ../../docs/
 
 # 重新处理并输出日志
 python scripts/ingest.py --verbose --clear
@@ -398,7 +398,7 @@ python scripts/ingest.py --clear
 该服务已完整集成至 VitePress-Lite 的 Monorepo 中：
 
 1. **代理配置**：前端通过 `/api/chat` 转发至该服务（已优化代理配置顺序）
-2. **文档共享**：读取 `../docs-site/docs/` 中的内容
+2. **文档共享**：读取 `../../docs/` 中的内容
 3. **类型共享**：使用统一接口定义
 4. **UI集成**：前端包含优化的聊天组件，支持格式化消息显示
 

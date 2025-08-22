@@ -244,6 +244,7 @@ const scrollToFeatures = () => {
   margin: 0 auto;
   padding: 0 var(--spacing-lg);
   text-align: center;
+  padding: 16px;
 }
 
 .hero-badge {

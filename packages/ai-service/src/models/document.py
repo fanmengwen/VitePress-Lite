@@ -44,8 +44,7 @@ class DocumentChunk(BaseModel):
     @property
     def relative_path(self) -> str:
         """Get relative path for UI display."""
-        return self.document_path.replace('../docs-site/docs/', '')
-
+        return self.document_path.replace('../../docs/', '')
 
 class ProcessedDocument(BaseModel):
     """A fully processed document with chunks."""

@@ -33,6 +33,12 @@ export default defineConfig({
   ],
   server: {
     port: 5173,
+    // 配置SPA fallback，确保所有未匹配的路由都返回index.html
+    historyApiFallback: {
+      rewrites: [
+        { from: /.*/, to: '/index.html' }
+      ]
+    },
     proxy: {
       // AI service endpoints - 更具体的规则放在前面
       "/api/chat": {

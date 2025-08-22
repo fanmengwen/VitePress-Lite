@@ -95,7 +95,7 @@ class Settings(BaseSettings):
     
     # Document Processing
     docs_path: str = Field(
-        default="../docs-site/docs", description="Path to documentation files"
+        default="../../docs", description="Path to documentation files"
     )
     chunk_size: int = Field(
         default=1000, description="Document chunk size in characters"

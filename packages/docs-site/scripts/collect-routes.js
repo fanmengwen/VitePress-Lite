@@ -15,7 +15,7 @@ const __dirname = dirname(__filename);
 export async function collectPrerenderRoutes() {
   try {
     // 1. 扫描所有markdown文件
-    const pages = await glob("docs/**/*.md", {
+    const pages = await glob("../../docs/**/*.md", {
       cwd: join(__dirname, ".."),
     });
 
@@ -77,4 +77,3 @@ export function extractPageMeta(route) {
     };
   }
 }
-

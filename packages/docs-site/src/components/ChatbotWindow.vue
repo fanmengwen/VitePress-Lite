@@ -400,7 +400,7 @@ onMounted(() => {
 <style scoped>
 .chatbot-window {
   position: fixed;
-  bottom: 2rem;
+  bottom: 6rem;
   right: 2rem;
   z-index: 1000;
   font-family: inherit;

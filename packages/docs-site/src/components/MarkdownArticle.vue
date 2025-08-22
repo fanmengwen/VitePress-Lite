@@ -130,6 +130,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import type { Post } from '@/api';
+import { scrollToTop } from '@/utils/scrollUtils';
 
 interface Props {
   article?: Post;
@@ -234,6 +235,8 @@ onMounted(() => {
   // 初始化代码复制功能
   const { setupCodeBlockCopy } = require('@/utils/codeBlockCopy');
   setupCodeBlockCopy();
+  
+  // 路由守卫会处理滚动，这里不需要额外操作
 });
 </script>
 
@@ -246,13 +249,15 @@ onMounted(() => {
 }
 
 .page-background {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   z-index: -1;
+  /* 改为absolute定位，避免干扰页面滚动 */
+  min-height: 100vh;
 }
 
 /* === 文章卡片主容器 === */

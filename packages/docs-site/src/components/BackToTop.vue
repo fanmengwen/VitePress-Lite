@@ -66,7 +66,7 @@ const documentHeight = ref(0);
 
 // 配置选项
 const showThreshold = 300; // 显示按钮的滚动阈值
-const scrollDuration = 800; // 滚动动画持续时间
+const scrollDuration = 400; // 滚动动画持续时间
 
 // 计算属性
 const scrollProgress = computed(() => {

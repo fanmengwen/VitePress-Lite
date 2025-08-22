@@ -7,40 +7,27 @@ export default {
   // 目录标题映射
   directoryTitles: {
     // 根级别目录映射
-    unit: "📚 核心单元",
+    "docs/01-getting-started": "01 入门",
+    "docs/02-core-concepts": "02 核心概念",
+    "docs/03-configuration": "03 高级概念",
+    "docs/04-seo-performance": "04 SEO 性能",
+    "docs/05-version": "05 版本控制",
   },
 
   // 文件标题映射 (可选，优先级高于frontmatter)
-  fileTitles: {
-    total: "📖 Vite 知识体系总览",
-    "unit/unit1": "🎯 核心理念详解",
-    "unit/unit2": "⚡ 与 Webpack 的差异分析",
-    "unit/unit3": "🔥 HMR 热更新原理",
-    hmr: "🔥 HMR 热更新原理",
-    setting: "🔥 项目配置详解",
-  },
+  fileTitles: {},
 
   // 排序规则
   sortRules: {
     // 根级别排序
-    order: ["total", "unit", "hmr", "setting"],
+    order: [""],
 
     // 子目录排序
-    unit: ["unit1", "unit2", "unit3"],
+    unit: [""],
   },
 
   // 显示选项
   displayOptions: {
-    // 是否显示文件图标
-    showFileIcons: true,
-
-    // 是否显示目录图标
-    showDirectoryIcons: true,
-
-    // 默认展开的目录
-    expandedByDefault: ["unit", "guide"],
-
-    // 是否隐藏特定文件/目录
     hidden: ["drafts", "temp"],
   },
 

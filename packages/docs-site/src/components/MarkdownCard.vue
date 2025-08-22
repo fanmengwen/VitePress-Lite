@@ -31,7 +31,6 @@
       
       <!-- 标题和图标 -->
       <div class="title-section">
-        <div class="card-icon">{{ cardIcon }}</div>
         <h3 class="card-title">
           {{ displayTitle }}
           <span v-if="post" class="data-indicator" title="已关联文章数据">✨</span>
@@ -65,16 +64,7 @@
           <span class="meta-text">{{ formatDate(post.updatedAt) }}</span>
         </div>
       </div>
-      <div v-else class="static-meta">
-        <div class="meta-item">
-          <span class="meta-icon">📄</span>
-          <span class="meta-text">静态文档</span>
-        </div>
-        <div class="meta-item">
-          <span class="meta-icon">🔗</span>
-          <span class="meta-text">{{ displayPath }}</span>
-        </div>
-      </div>
+     
     </div>
 
     <!-- 卡片底部行动区域 -->
@@ -145,19 +135,6 @@ const displayPath = computed(() => {
   return `/posts/${props.post?.slug || "unknown"}`;
 });
 
-// 卡片图标
-const cardIcon = computed(() => {
-  if (props.isStatic) {
-    // 根据路径判断文档类型
-    const path = props.path || "";
-    if (path.includes("unit")) return "📖";
-    if (path.includes("total") || path.includes("overview")) return "📋";
-    if (path.includes("api")) return "🔧";
-    if (path.includes("guide")) return "📚";
-    return "📘";
-  }
-  return "📰";
-});
 
 // 卡片类型文本
 const cardTypeText = computed(() => {
@@ -350,12 +327,6 @@ const truncateContent = (content: string, maxLength = 120): string => {
   gap: var(--spacing-md);
 }
 
-.card-icon {
-  font-size: var(--font-size-2xl);
-  line-height: 1;
-  flex-shrink: 0;
-  margin-top: var(--spacing-xs);
-}
 
 .card-title {
   font-size: var(--font-size-xl);
@@ -401,11 +372,7 @@ const truncateContent = (content: string, maxLength = 120): string => {
 }
 
 .meta-info,
-.static-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-lg);
-}
+
 
 .meta-item {
   display: flex;
