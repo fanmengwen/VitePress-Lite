@@ -3,6 +3,7 @@
   /* === 字体系统 === */
   --font-family-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --font-family-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, 'Courier New', monospace;
+  --font-mono: var(--font-family-mono);
   --font-family-serif: 'Times New Roman', Times, 'Songti SC', 'SimSun', serif;
   
   /* 字号系统 */
@@ -34,7 +35,11 @@
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-error: #ef4444;
+  --color-danger: #ef4444;
+  --color-danger-bg: #fef2f2;
+  --color-danger-border: #fecaca;
   --color-info: #3b82f6;
+  --color-text-accent: #6366f1;
   
   /* 文本颜色 */
   --color-text-primary: #1f2937;

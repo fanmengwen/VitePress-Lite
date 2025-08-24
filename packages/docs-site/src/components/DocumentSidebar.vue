@@ -644,10 +644,15 @@ watch(() => router.currentRoute.value.path, (newPath) => {
   }
 
   .document-sidebar {
-    position: relative;
-    top: 0;
+    position: fixed;
+    top: 64px; /* 导航栏高度 */
+    left: 0;
     transform: translateX(0);
-    box-shadow: none;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .document-sidebar.is-visible {
+    transform: translateX(0);
   }
 
   .close-button {
