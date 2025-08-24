@@ -163,7 +163,7 @@ onUnmounted(() => {
 .back-to-top-btn {
   position: fixed;
   bottom: var(--spacing-2xl);
-  right: var(--spacing-2xl);
+  left: var(--spacing-2xl);
   z-index: var(--z-fixed);
   width: 56px;
   height: 56px;

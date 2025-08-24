@@ -95,6 +95,8 @@
   /* === Z-index 层级 === */
   --z-dropdown: 1000;
   --z-sticky: 1020;
+  --z-sidebar: 1025;
+  --z-floating: 1015;
   --z-fixed: 1030;
   --z-modal-backdrop: 1040;
   --z-modal: 1050;

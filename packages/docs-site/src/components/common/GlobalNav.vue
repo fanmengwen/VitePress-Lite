@@ -21,45 +21,6 @@
           <span class="nav-icon">🏠</span>
           <span>首页</span>
         </router-link>
-
-        <!-- 文档导航下拉菜单 -->
-        <div 
-          v-if="documentRoutes.length > 0" 
-          class="nav-dropdown"
-          @mouseenter="showDropdown = true"
-          @mouseleave="showDropdown = false"
-          ref="dropdownContainer"
-        >
-          <button class="nav-item dropdown-trigger" :class="{ active: showDropdown }">
-            <span class="nav-icon">📖</span>
-            <span>文档</span>
-            <span class="dropdown-arrow" :class="{ rotated: showDropdown }">▼</span>
-          </button>
-          
-          <transition name="dropdown">
-            <div 
-              v-show="showDropdown" 
-              class="dropdown-menu"
-              :class="{ 'dropdown-right': shouldAlignRight }"
-              ref="dropdownMenu"
-            >
-              <div class="dropdown-content">
-                <div class="dropdown-section">
-                  <h4 class="dropdown-title">文档导航</h4>
-                  <div class="dropdown-items">
-                    <NestedNavItem 
-                      v-for="route in documentRoutes" 
-                      :key="route.path" 
-                      :route="route"
-                      :depth="0"
-                      @click="showDropdown = false"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </transition>
-        </div>
       </div>
 
       <!-- 移动端菜单按钮 -->
@@ -84,18 +45,6 @@
             <span>首页</span>
           </router-link>
           
-          <div v-if="documentRoutes.length > 0" class="mobile-nav-section">
-            <h4 class="mobile-nav-title">📖 文档导航</h4>
-            <div class="mobile-nav-items">
-              <NestedNavItem 
-                v-for="route in documentRoutes" 
-                :key="route.path" 
-                :route="route"
-                :depth="0"
-                @click="closeMobileMenu"
-              />
-            </div>
-          </div>
         </div>
       </div>
     </transition>
@@ -103,100 +52,34 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, nextTick, watch } from 'vue';
-import router from "../../router";
-import NestedNavItem from './NestedNavItem.vue';
-
-interface RouteItem {
-  path: string;
-  title: string;
-  children?: RouteItem[];
-  redirect?: string;
-}
+import { ref, onMounted, onUnmounted } from 'vue'
 
 // 响应式状态
-const isScrolled = ref(false);
-const showDropdown = ref(false);
-const isMobileMenuOpen = ref(false);
-const shouldAlignRight = ref(false);
+const isScrolled = ref(false)
+const isMobileMenuOpen = ref(false)
 
-// DOM 引用
-const dropdownContainer = ref<HTMLElement>();
-const dropdownMenu = ref<HTMLElement>();
+// 方法
+const toggleMobileMenu = () => {
+  isMobileMenuOpen.value = !isMobileMenuOpen.value
+}
 
-// 过滤出文档路由（排除首页）
-const documentRoutes = computed(() => {
-  const routes = (router?.options?.routes as RouteItem[]) || [];
-  return routes.filter((route) => route.path !== "/" && route.title);
-});
+const closeMobileMenu = () => {
+  isMobileMenuOpen.value = false
+}
 
 // 滚动监听
 const handleScroll = () => {
-  isScrolled.value = window.scrollY > 10;
-};
+  isScrolled.value = window.scrollY > 10
+}
 
-// 检查下拉菜单是否应该右对齐
-const checkDropdownPosition = async () => {
-  if (!dropdownContainer.value || !dropdownMenu.value) return;
-  
-  await nextTick();
-  
-  const containerRect = dropdownContainer.value.getBoundingClientRect();
-  const menuWidth = 320; // 下拉菜单宽度
-  const windowWidth = window.innerWidth;
-  
-  // 如果右侧空间不足，则右对齐
-  shouldAlignRight.value = containerRect.right + menuWidth > windowWidth;
-};
-
-// 监听下拉菜单显示状态变化
-watch(showDropdown, (newValue) => {
-  if (newValue) {
-    checkDropdownPosition();
-  }
-});
-
-// 移动端菜单控制
-const toggleMobileMenu = () => {
-  isMobileMenuOpen.value = !isMobileMenuOpen.value;
-};
-
-const closeMobileMenu = () => {
-  isMobileMenuOpen.value = false;
-};
-
-// 窗口大小变化监听
-const handleResize = () => {
-  if (showDropdown.value) {
-    checkDropdownPosition();
-  }
-  
-  // 大屏幕时自动关闭移动端菜单
-  if (window.innerWidth > 768) {
-    isMobileMenuOpen.value = false;
-  }
-};
-
-// 点击外部关闭菜单
-const handleClickOutside = (event: MouseEvent) => {
-  if (dropdownContainer.value && !dropdownContainer.value.contains(event.target as Node)) {
-    showDropdown.value = false;
-  }
-};
-
-// 生命周期钩子
+// 生命周期
 onMounted(() => {
-  window.addEventListener('scroll', handleScroll, { passive: true });
-  window.addEventListener('resize', handleResize);
-  document.addEventListener('click', handleClickOutside);
-  handleScroll(); // 初始检查
-});
+  window.addEventListener('scroll', handleScroll)
+})
 
 onUnmounted(() => {
-  window.removeEventListener('scroll', handleScroll);
-  window.removeEventListener('resize', handleResize);
-  document.removeEventListener('click', handleClickOutside);
-});
+  window.removeEventListener('scroll', handleScroll)
+})
 </script>
 
 <style scoped>
@@ -316,68 +199,6 @@ onUnmounted(() => {
   line-height: 1;
 }
 
-/* === 下拉菜单样式 === */
-.nav-dropdown {
-  position: relative;
-}
-
-.dropdown-trigger {
-  position: relative;
-}
-
-.dropdown-arrow {
-  font-size: var(--font-size-xs);
-  transition: var(--transition-fast);
-  margin-left: var(--spacing-xs);
-}
-
-.dropdown-arrow.rotated {
-  transform: rotate(180deg);
-}
-
-.dropdown-menu {
-  position: absolute;
-  top: calc(100% + var(--spacing-md));
-  left: 50%;
-  transform: translateX(-50%);
-  width: 320px;
-  background: var(--color-bg-primary);
-  border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-xl);
-  border: 1px solid var(--color-border-default);
-  overflow: hidden;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  z-index: var(--z-dropdown);
-}
-
-/* 右对齐的下拉菜单 */
-.dropdown-menu.dropdown-right {
-  left: auto;
-  right: 0;
-  transform: none;
-}
-
-.dropdown-content {
-  padding: var(--spacing-xl);
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.dropdown-title {
-  margin: 0 0 var(--spacing-lg) 0;
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  color: var(--color-text-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding-bottom: var(--spacing-md);
-  border-bottom: 2px solid var(--color-border-default);
-}
-
-.dropdown-items {
-  /* NestedNavItem 组件会处理内部样式 */
-}
 
 /* === 移动端菜单按钮 === */
 .mobile-menu-toggle {

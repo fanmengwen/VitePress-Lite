@@ -2,10 +2,9 @@
 
 /* 主容器 - 版心设计 */
 .markdown-page {
-  max-width: var(--container-content);
-  margin: 0 auto;
-  margin-top: 64px;
-  padding:var(--spacing-md) calc(var(--spacing-lg) * 2);
+  max-width: none;
+  margin: 0;
+  padding: var(--spacing-xl);
   background-color: var(--color-bg-primary);
   border-radius: var(--radius-2xl);
   min-height: calc(100vh - 64px);

@@ -169,7 +169,7 @@ function buildRouteTree(pages, config) {
     const routeData = {
       path: pathToRoutePath(page),
       title: mappedTitle,
-      component: `() => import('/${page}')`,
+      component: `() => import('@/components/MarkdownPage.vue')`,
       isFile: true,
     };
 
@@ -226,6 +226,9 @@ function convertTreeToNestedRoutes(treeNode, config, parentPath = "") {
       routes.push({
         path: node.path,
         title: node.title,
+        meta: {
+          title: node.title,
+        },
         component: node.component,
       });
     } else {
@@ -243,6 +246,9 @@ function convertTreeToNestedRoutes(treeNode, config, parentPath = "") {
         routes.push({
           path: node.path,
           title: node.title,
+          meta: {
+            title: node.title,
+          },
           children: sortedChildren,
           // 目录本身可能需要一个默认组件或重定向
           redirect: sortedChildren[0]?.path,
