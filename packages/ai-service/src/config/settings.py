@@ -109,7 +109,7 @@ class Settings(BaseSettings):
         default=5, description="Number of relevant chunks to retrieve"
     )
     similarity_threshold: float = Field(
-        default=0.5, description="Minimum similarity score for retrieval"
+        default=0.7, description="Minimum similarity score for retrieval"
     )
     
     # API Configuration

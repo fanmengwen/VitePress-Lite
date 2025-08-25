@@ -3,9 +3,7 @@ RAG (Retrieval-Augmented Generation) pipeline service.
 Combines vector search, context building, and LLM generation.
 """
 
-import asyncio
-from typing import List, Dict, Any, Optional, Tuple
-from datetime import datetime
+from typing import List, Dict, Any, Tuple, Optional
 import time
 from loguru import logger
 
@@ -106,20 +104,31 @@ class RAGPipeline:
         top_k: int = 5,
         similarity_threshold: float = None
     ) -> List[Tuple[DocumentChunk, float]]:
-        """Retrieve relevant documents from vector store."""
+        """Retrieve relevant documents from vector store with smart filtering."""
         
         similarity_threshold = similarity_threshold or settings.similarity_threshold
         
         try:
-            # Perform semantic search
+            # 智能查询意图识别
+            query_intent = self._analyze_query_intent(query)
+            metadata_filter = self._build_metadata_filter(query_intent)
+            
+            # 执行语义搜索
             results = await vector_store.search_similar(
                 query=query,
-                top_k=top_k,
-                similarity_threshold=similarity_threshold
+                top_k=top_k * 2,  # 获取更多结果用于后续过滤
+                similarity_threshold=similarity_threshold,
+                metadata_filter=metadata_filter
             )
             
-            logger.debug(f"Retrieved {len(results)} relevant chunks")
-            return results
+            # 基于查询意图进行二次过滤
+            filtered_results = self._post_filter_results(results, query_intent, query)
+            
+            # 限制最终结果数量
+            final_results = filtered_results[:top_k]
+            
+            logger.info(f"Query intent: {query_intent}, Retrieved {len(final_results)}/{len(results)} relevant chunks")
+            return final_results
             
         except Exception as e:
             logger.error(f"Document retrieval failed: {e}")
@@ -235,6 +244,118 @@ Relevance: {score:.2f}
             response_time_ms=response_time_ms
         )
     
+    def _analyze_query_intent(self, query: str) -> str:
+        """分析查询意图，识别用户想要查找的内容类型."""
+        query_lower = query.lower()
+        
+        # 配置相关关键词
+        config_keywords = ['配置', 'config', '设置', 'setting', '选项', 'option', 
+                          'vite.config', 'alias', '别名', '代理', 'proxy', '环境变量']
+        
+        # 版本发布相关关键词  
+        version_keywords = ['版本', 'version', '发布', 'release', '更新', 'update', 
+                           'announcing', '新特性', 'feature', '变更', 'change']
+        
+        # 概念学习相关关键词
+        concept_keywords = ['是什么', '什么是', 'what is', '如何', 'how', '为什么', 'why',
+                           '原理', 'principle', '机制', 'mechanism']
+        
+        # 性能优化相关关键词
+        performance_keywords = ['性能', 'performance', '优化', 'optimization', 'seo',
+                              '速度', 'speed', '快', 'fast']
+        
+        # 匹配意图
+        if any(keyword in query_lower for keyword in config_keywords):
+            return 'configuration'
+        elif any(keyword in query_lower for keyword in version_keywords):
+            return 'version_release'
+        elif any(keyword in query_lower for keyword in concept_keywords):
+            return 'concept_learning'
+        elif any(keyword in query_lower for keyword in performance_keywords):
+            return 'performance'
+        else:
+            return 'general'
+    
+    def _build_metadata_filter(self, query_intent: str) -> Optional[Dict[str, Any]]:
+        """根据查询意图构建元数据过滤条件."""
+        
+        # ChromaDB 使用简单的键值对过滤，暂时禁用复杂过滤
+        # 将在后续的二次过滤中实现精确匹配
+        return None  # 使用后续的二次过滤替代元数据预过滤
+    
+    def _post_filter_results(
+        self, 
+        results: List[Tuple[DocumentChunk, float]], 
+        query_intent: str,
+        original_query: str
+    ) -> List[Tuple[DocumentChunk, float]]:
+        """基于查询意图对检索结果进行二次过滤."""
+        
+        if not results:
+            return results
+            
+        filtered_results = []
+        
+        for chunk, score in results:
+            # 基于查询意图的相关性评分调整
+            relevance_boost = self._calculate_intent_relevance_boost(chunk, query_intent, original_query)
+            adjusted_score = min(score + relevance_boost, 1.0)
+            
+            # 基于调整后的分数重新过滤
+            if adjusted_score >= settings.similarity_threshold:
+                filtered_results.append((chunk, adjusted_score))
+        
+        # 按调整后的分数重新排序
+        filtered_results.sort(key=lambda x: x[1], reverse=True)
+        
+        return filtered_results
+    
+    def _calculate_intent_relevance_boost(
+        self, 
+        chunk: DocumentChunk, 
+        query_intent: str,
+        original_query: str
+    ) -> float:
+        """根据文档与查询意图的匹配度计算相关性提升分数."""
+        
+        boost = 0.0
+        query_lower = original_query.lower()
+        
+        # 文档路径匹配加分
+        doc_path = chunk.document_path.lower()
+        title_lower = chunk.title.lower()
+        
+        if query_intent == 'configuration':
+            if '03-configuration' in doc_path or 'config' in title_lower or '配置' in title_lower:
+                boost += 0.2
+            # 如果查询配置但匹配到版本发布文档，大幅降分
+            if '05-version' in doc_path and 'announcing' in doc_path:
+                boost -= 0.3
+                
+        elif query_intent == 'version_release':
+            if '05-version' in doc_path:
+                boost += 0.2
+            # 版本查询匹配到配置文档，适度降分
+            if '03-configuration' in doc_path:
+                boost -= 0.1
+                
+        elif query_intent == 'concept_learning':
+            if '01-getting-started' in doc_path or '02-core-concepts' in doc_path:
+                boost += 0.2
+                
+        elif query_intent == 'performance':
+            if '04-seo-performance' in doc_path:
+                boost += 0.2
+        
+        # 内容关键词匹配加分
+        content_lower = chunk.content.lower()
+        if query_intent == 'configuration':
+            config_content_keywords = ['vite.config', 'defineconfig', 'plugins', 'alias', 'proxy']
+            matches = sum(1 for keyword in config_content_keywords if keyword in content_lower)
+            boost += matches * 0.05
+        
+        return boost
+
     def _create_error_response(self, request: ChatRequest, error: str, start_time: float) -> ChatResponse:
         """Create response when an error occurs."""
         

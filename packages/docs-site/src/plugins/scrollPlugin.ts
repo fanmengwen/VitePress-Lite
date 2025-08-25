@@ -157,4 +157,3 @@ export default {
 
 // 导出类型
 export type { ScrollManager };
-export { ScrollManager };

@@ -13,7 +13,7 @@ def set_performance_env():
     """设置性能优化环境变量"""
     optimizations = {
         'RETRIEVAL_TOP_K': '3',
-        'SIMILARITY_THRESHOLD': '0.3', 
+        'SIMILARITY_THRESHOLD': '0.7', 
         'OPENAI_MAX_TOKENS': '500',
         'CHUNK_SIZE': '1000',
         'CHUNK_OVERLAP': '200',

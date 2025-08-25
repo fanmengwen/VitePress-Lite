@@ -88,10 +88,16 @@
                 <div 
                   v-for="source in message.sources" 
                   :key="source.file_path + source.chunk_index"
-                  class="source-item"
+                  class="source-item clickable"
+                  @click="navigateToSource(source)"
+                  :title="`点击跳转到：${source.title}`"
                 >
-                  <span class="source-title">{{ source.title }}</span>
+                  <span class="source-title">
+                    <span class="source-icon">📄</span>
+                    {{ source.title }}
+                  </span>
                   <span class="source-score">相似度: {{ Math.round(source.similarity_score * 100) }}%</span>
+                  <span class="source-link-icon">🔗</span>
                 </div>
               </div>
             </div>
@@ -163,6 +169,7 @@
 ## TODO
 <script setup lang="ts">
 import { ref, onMounted, nextTick, computed, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { aiApiClient, type ChatMessage, type ChatResponse, type SourceReference, getAIErrorMessage } from '@/api/ai';
 
 // Props
@@ -177,6 +184,9 @@ const props = withDefaults(defineProps<Props>(), {
   maxMessages: 100,
   persistHistory: true,
 });
+
+// Router instance
+const router = useRouter();
 
 // Reactive state
 const isExpanded = ref(props.autoExpand);
@@ -217,6 +227,43 @@ const expandChat = () => {
 
 const collapseChat = () => {
   isExpanded.value = false;
+};
+
+// Navigate to source document
+const navigateToSource = (source: SourceReference) => {
+  try {
+    // Convert file_path to route path
+    // Example: "03-configuration/setting.md" -> "/03-configuration/setting"
+    let routePath = source.file_path;
+    
+    // Remove .md extension
+    if (routePath.endsWith('.md')) {
+      routePath = routePath.slice(0, -3);
+    }
+    
+    // Ensure it starts with /
+    if (!routePath.startsWith('/')) {
+      routePath = '/' + routePath;
+    }
+    
+    console.log(`Navigating to source: ${source.title} -> ${routePath}`);
+    
+    // Navigate to the document
+    router.push(routePath);
+    
+    // Collapse chat window after navigation
+    collapseChat();
+    
+  } catch (error) {
+    console.error('Failed to navigate to source:', error);
+    // Show user-friendly error
+    errorMessage.value = '跳转失败，请手动搜索相关文档';
+    hasError.value = true;
+    setTimeout(() => {
+      hasError.value = false;
+      errorMessage.value = '';
+    }, 3000);
+  }
 };
 
 const sendMessage = async () => {
@@ -632,16 +679,57 @@ onMounted(() => {
   padding: 0.5rem;
   background: rgba(255, 255, 255, 0.5);
   border-radius: 6px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+/* Clickable source styling */
+.source-item.clickable {
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.source-item.clickable:hover {
+  background: rgba(102, 126, 234, 0.15);
+  border-color: rgba(102, 126, 234, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+.source-item.clickable:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(102, 126, 234, 0.2);
 }
 
 .source-title {
   font-weight: 500;
   color: #333;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.source-icon {
+  font-size: 0.875rem;
+  opacity: 0.7;
 }
 
 .source-score {
   color: #667eea;
   font-weight: 600;
+  margin: 0 0.5rem;
+}
+
+.source-link-icon {
+  font-size: 0.75rem;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.source-item.clickable:hover .source-link-icon {
+  opacity: 1;
+  transform: scale(1.1);
 }
 
 /* Welcome Message */

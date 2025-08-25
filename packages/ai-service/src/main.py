@@ -307,7 +307,7 @@ def main():
         port=settings.port,
         reload=settings.reload and settings.is_development(),
         workers=1 if settings.is_development() else settings.workers,
-        log_level=settings.log_level.lower(),
+        log_level=str(settings.log_level).lower(),
         access_log=settings.is_development()
     )
 
