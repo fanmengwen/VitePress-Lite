@@ -83,27 +83,20 @@ export function useSidebar() {
 
   // 构建侧边栏数据（从虚拟页面插件的嵌套路由）
   const buildSidebarFromVueRoutes = (routes: any[], currentRoute: RouteLocationNormalized): SidebarItem[] => {
-    console.log('🚀 Building sidebar from Vue routes:')
-    console.log('📊 Total routes received:', routes.length)
+    // console.log('🚀 Building sidebar from Vue routes:')
+    // console.log('📊 Total routes received:', routes.length)
     
     // 过滤出有 children 的路由（这些是虚拟页面插件生成的父级路由）
     const documentRoutes = routes.filter(route => {
       const hasValidChildren = route.children && route.children.length > 0 && (route.title || route.meta?.title)
-      console.log(`Route ${route.path}:`, {
-        title: route.title,
-        metaTitle: route.meta?.title,
-        hasChildren: !!route.children,
-        childrenCount: route.children?.length || 0,
-        isValid: hasValidChildren
-      })
       return hasValidChildren
     })
 
-    console.log(`📋 Found ${documentRoutes.length} document routes with children`)
+    // console.log(`📋 Found ${documentRoutes.length} document routes with children`)
 
     // 转换为侧边栏项
     const sidebarItems = documentRoutes.map(route => convertRouteToSidebarItem(route, 0))
-    console.log('🎯 Generated sidebar items:', sidebarItems)
+    // console.log('🎯 Generated sidebar items:', sidebarItems)
     
     // 如果没有找到路由，返回测试数据
     if (sidebarItems.length === 0) {
@@ -155,73 +148,6 @@ export function useSidebar() {
     return item
   }
 
-  // 构建侧边栏树形结构（备用函数）
-  const buildSidebarTree = (routes: any[], currentRoute: RouteLocationNormalized): SidebarItem[] => {
-    console.log('🚀 Building sidebar tree from routes:')
-    console.log('📊 Total routes received:', routes.length)
-    
-    // 打印所有路由信息进行调试
-    routes.forEach((route, index) => {
-      console.log(`Route ${index}:`, {
-        path: route.path,
-        name: route.name,
-        title: route.title,
-        hidden: route.hidden,
-        hasChildren: !!route.children,
-        component: typeof route.component
-      })
-    })
-    
-    // 过滤出文档路由（排除首页和404页面）
-    const documentRoutes = routes.filter(route => {
-      const isValid = route.path !== '/' && 
-             route.path !== '/:pathMatch(.*)*' && 
-             !route.hidden &&
-             route.title
-      
-      if (isValid) {
-        console.log('✅ Valid document route:', route.path, route.title, 'has children:', !!route.children)
-      } else {
-        console.log('❌ Filtered out route:', {
-          path: route.path,
-          title: route.title,
-          hidden: route.hidden,
-          reason: !route.title ? 'No title' : route.path === '/' ? 'Homepage' : route.path === '/:pathMatch(.*)*' ? '404 route' : route.hidden ? 'Hidden' : 'Unknown'
-        })
-      }
-      return isValid
-    })
-
-    console.log(`📋 Found ${documentRoutes.length} document routes out of ${routes.length} total`)
-
-    // 递归转换虚拟页面插件的嵌套结构为侧边栏结构
-    const convertRouteToSidebarItem = (route: any, level = 0): SidebarItem => {
-      const item: SidebarItem = {
-        path: route.path,
-        title: route.title,
-        isFile: !route.children || route.children.length === 0,
-        level,
-        isExpanded: isItemExpanded(route.path),
-        isActive: isItemActive(route.path)
-      }
-
-      // 如果有子路由，递归处理
-      if (route.children && route.children.length > 0) {
-        console.log(`📁 Processing children for ${route.path}:`, route.children.length)
-        item.children = route.children.map((child: any) => 
-          convertRouteToSidebarItem(child, level + 1)
-        )
-        item.isFile = false
-      }
-
-      return item
-    }
-
-    // 转换所有文档路由
-    const result = documentRoutes.map(route => convertRouteToSidebarItem(route))
-    console.log('🎯 Final sidebar items:', result)
-    return result
-  }
 
   // 从路径获取默认标题
   const getDefaultTitle = (path: string): string => {

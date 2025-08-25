@@ -288,7 +288,6 @@ export default function virtualPagesPlugin() {
 
           // 3. 构建路由树（集成配置文件）
           const routeTree = buildRouteTree(pages, config);
-          console.log("🚀 ~ load ~ routeTree:", routeTree);
 
           // 4. 转换为嵌套路由数组
           const routes = convertTreeToNestedRoutes(routeTree, config);

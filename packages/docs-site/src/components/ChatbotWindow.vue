@@ -845,12 +845,13 @@ onMounted(() => {
   cursor: pointer;
   transition: all 0.2s;
   flex: 1;
+  color: #667eea;
+
 }
 
 .action-btn:hover {
   background: rgba(102, 126, 234, 0.1);
   border-color: #667eea;
-  color: #667eea;
 }
 
 @media (prefers-color-scheme: dark) {

@@ -61,7 +61,6 @@ export function usePostsData(): PostsState {
     fetchPosts();
   });
 
-  // console.log("🚀 ~ fetchPosts ~ posts:", posts, posts.value)
 
   return {
     posts,

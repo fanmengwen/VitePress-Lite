@@ -5,6 +5,14 @@
         <h1>{{ pageTitle }}</h1>
         <div class="page-meta">
           <span class="current-path">{{ route.path }}</span>
+          <span v-if="metadata.author" class="author-info">
+            <i class="author-icon">👤</i>
+            作者: {{ metadata.author }}
+          </span>
+          <span v-if="metadata.date" class="date-info">
+            <i class="date-icon">📅</i>
+            {{ metadata.date }}
+          </span>
         </div>
       </div>
       
@@ -18,23 +26,110 @@
       <div v-if="error" class="error">
         <p>❌ {{ error }}</p>
       </div>
+      
+      <!-- 文档导航 Footer -->
+      <footer v-if="!loading && !error && markdownContent" class="document-footer">
+        <div class="footer-divider"></div>
+        <div class="footer-navigation">
+          <!-- 上一篇 -->
+          <div class="nav-item prev-nav">
+            <router-link 
+              v-if="navigation.prev" 
+              :to="navigation.prev.path" 
+              class="nav-link"
+            >
+              <div class="nav-direction">
+                <i class="nav-icon">←</i>
+                <span class="nav-label">上一篇</span>
+              </div>
+              <div class="nav-title">{{ navigation.prev.title }}</div>
+            </router-link>
+            <div v-else class="nav-placeholder"></div>
+          </div>
+
+          <!-- 回到顶部按钮 -->
+          <div class="nav-center">
+            <button @click="scrollToTop" class="scroll-top-btn">
+              <i class="scroll-icon">↑</i>
+              <span>回到顶部</span>
+            </button>
+          </div>
+
+          <!-- 下一篇 -->
+          <div class="nav-item next-nav">
+            <router-link 
+              v-if="navigation.next" 
+              :to="navigation.next.path" 
+              class="nav-link"
+            >
+              <div class="nav-direction">
+                <span class="nav-label">下一篇</span>
+                <i class="nav-icon">→</i>
+              </div>
+              <div class="nav-title">{{ navigation.next.title }}</div>
+            </router-link>
+            <div v-else class="nav-placeholder"></div>
+          </div>
+        </div>
+      </footer>
     </div>
   </DocumentLayout>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import DocumentLayout from './DocumentLayout.vue'
 
 const route = useRoute()
+const router = useRouter()
 const markdownContent = ref('')
 const loading = ref(false)
 const error = ref('')
+const metadata = ref<Record<string, string>>({})
 
 // 从路由中获取页面标题
 const pageTitle = computed(() => {
   return route.meta?.title || extractTitleFromPath(route.path)
+})
+
+const pagePath = computed(() => {
+  return route.path
+})
+
+// 获取所有文档路由（排除首页和404页面）
+const getAllDocRoutes = () => {
+  const allRoutes = router.getRoutes()
+  const docRoutes: Array<{path: string, title: string}> = []
+  
+  const extractRoutes = (routes: any[]) => {
+    routes.forEach(route => {
+      if (route.path !== '/' && route.path !== '/:pathMatch(.*)*' && !route.hidden) {
+        if (route.children && route.children.length > 0) {
+          extractRoutes(route.children)
+        } else if (route.path.startsWith('/') && route.meta?.title) {
+          docRoutes.push({
+            path: route.path,
+            title: route.meta.title
+          })
+        }
+      }
+    })
+  }
+  
+  extractRoutes(allRoutes)
+  return docRoutes.sort((a, b) => a.path.localeCompare(b.path))
+}
+
+// 计算上一篇和下一篇
+const navigation = computed(() => {
+  const allDocRoutes = getAllDocRoutes()
+  const currentIndex = allDocRoutes.findIndex(r => r.path === route.path)
+  
+  return {
+    prev: currentIndex > 0 ? allDocRoutes[currentIndex - 1] : null,
+    next: currentIndex < allDocRoutes.length - 1 ? allDocRoutes[currentIndex + 1 +1] : null
+  }
 })
 
 // 从路径提取标题
@@ -156,7 +251,6 @@ const loadMarkdownContent = async () => {
   
   try {
     const markdownPath = getMarkdownPath(route.path)
-    console.log('Loading markdown from:', markdownPath)
     
     const response = await fetch(markdownPath)
     
@@ -165,20 +259,15 @@ const loadMarkdownContent = async () => {
     }
     
     const rawContent = await response.text()
-    console.log('Raw content loaded, length:', rawContent.length)
     
     // 解析 frontmatter 和内容
-    const { metadata, content } = parseFrontmatter(rawContent)
-    console.log('Parsed metadata:', metadata)
+    const { metadata: parsedMetadata, content } = parseFrontmatter(rawContent)
     
-    // 如果有 frontmatter 标题，更新页面标题
-    if (metadata.title) {
-      // 这里可以更新页面标题，但要注意响应式
-    }
+    // 更新响应式metadata
+    metadata.value = parsedMetadata
     
     // 转换 markdown 为 HTML
     markdownContent.value = markdownToHtml(content)
-    console.log('HTML content generated, length:', markdownContent.value.length)
       
   } catch (err) {
     console.error('Failed to load markdown:', err)
@@ -197,6 +286,14 @@ const loadMarkdownContent = async () => {
 watch(() => route.path, () => {
   loadMarkdownContent()
 }, { immediate: true })
+
+// 滚动到顶部功能
+const scrollToTop = () => {
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  })
+}
 
 onMounted(() => {
   loadMarkdownContent()
@@ -228,6 +325,7 @@ onMounted(() => {
   align-items: center;
   gap: var(--spacing-md);
   margin-top: var(--spacing-sm);
+  flex-wrap: wrap;
 }
 
 .current-path {
@@ -238,6 +336,24 @@ onMounted(() => {
   font-family: var(--font-mono);
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border-light);
+}
+
+.author-info,
+.date-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-light);
+}
+
+.author-icon,
+.date-icon {
+  font-size: var(--font-size-xs);
 }
 
 .markdown-content {
@@ -422,5 +538,163 @@ onMounted(() => {
 .error p {
   margin: 0;
   font-weight: 500;
+}
+
+/* Document Navigation Footer Styles */
+.document-footer {
+  margin-top: var(--spacing-3xl);
+  padding-top: var(--spacing-xl);
+}
+
+.footer-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--color-border-default), transparent);
+  margin-bottom: var(--spacing-xl);
+}
+
+.footer-navigation {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: var(--spacing-lg);
+  align-items: center;
+}
+
+.nav-item {
+  display: flex;
+}
+
+.prev-nav {
+  justify-content: flex-start;
+}
+
+.next-nav {
+  justify-content: flex-end;
+}
+
+.nav-center {
+  display: flex;
+  justify-content: center;
+}
+
+.nav-link {
+  display: block;
+  padding: var(--spacing-lg);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  color: var(--color-text-primary);
+  transition: var(--transition-fast);
+  max-width: 280px;
+  min-height: 80px;
+}
+
+.nav-link:hover {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.nav-direction {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.nav-icon {
+  font-size: var(--font-size-md);
+  color: var(--color-primary);
+}
+
+.nav-label {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.nav-title {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.nav-placeholder {
+  width: 280px;
+  min-height: 80px;
+}
+
+.scroll-top-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-md);
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  white-space: nowrap;
+  min-width: 100px;
+}
+
+.scroll-top-btn:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.scroll-top-btn:active {
+  transform: translateY(0);
+}
+
+.scroll-icon {
+  font-size: var(--font-size-lg);
+  font-weight: bold;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .footer-navigation {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+    text-align: center;
+  }
+  
+  .nav-item {
+    justify-content: center;
+  }
+  
+  .nav-link {
+    max-width: 100%;
+    width: 100%;
+  }
+  
+  .nav-placeholder {
+    display: none;
+  }
+  
+  .page-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+  
+  .scroll-top-btn {
+    width: 100%;
+  }
 }
 </style>

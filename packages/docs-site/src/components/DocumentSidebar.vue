@@ -19,7 +19,6 @@
       <!-- 侧边栏头部 -->
       <header class="sidebar-header">
         <div class="sidebar-title">
-          <span class="title-icon">📚</span>
           <h2>文档导航</h2>
         </div>
         
@@ -415,9 +414,6 @@ watch(() => router.currentRoute.value.path, (newPath) => {
   gap: var(--spacing-md);
 }
 
-.title-icon {
-  font-size: var(--font-size-lg);
-}
 
 .sidebar-title h2 {
   margin: 0;

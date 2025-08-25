@@ -149,6 +149,22 @@ async function syncMarkdownFile(
       }
     }
 
+    // 处理创建时间（优先使用frontmatter.date，否则使用当前时间）
+    let createdAt = new Date();
+    if (frontmatter.date) {
+      try {
+        const parsedDate = new Date(frontmatter.date);
+        // 验证日期是否有效
+        if (!isNaN(parsedDate.getTime())) {
+          createdAt = parsedDate;
+        } else {
+          console.warn(`⚠️  无效的日期格式: ${frontmatter.date}，使用当前时间`);
+        }
+      } catch (error) {
+        console.warn(`⚠️  解析日期失败: ${frontmatter.date}，使用当前时间`);
+      }
+    }
+
     // 使用upsert确保幂等性
     const post = await prisma.post.upsert({
       where: { slug },
@@ -167,17 +183,19 @@ async function syncMarkdownFile(
         excerpt,
         published,
         authorId,
+        createdAt,
       },
       select: {
         id: true,
         title: true,
         slug: true,
         published: true,
+        createdAt: true,
       },
     });
 
     console.log(
-      `✅ ${post.id ? "更新" : "创建"}文章: ${post.title} (${post.slug})`,
+      `✅ ${post.id ? "更新" : "创建"}文章: ${post.title} (${post.slug})${frontmatter.date ? ` [创建时间: ${createdAt.toISOString().split('T')[0]}]` : ''}`,
     );
     return { success: true };
   } catch (error) {
@@ -203,7 +221,6 @@ async function syncDocsToDatabase(): Promise<SyncResult> {
   try {
     // 扫描docs目录下的所有Markdown文件
     const docsPath = resolve(process.cwd(), "../../docs");
-    console.log("🚀 ~ syncDocsToDatabase ~ docsPath:", docsPath)
     const pattern = `${docsPath}/**/*.md`;
 
     console.log(`📂 扫描目录: ${docsPath}`);

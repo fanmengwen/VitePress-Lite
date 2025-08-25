@@ -3,11 +3,7 @@
     <div class="error-content">
       <!-- 404图标 -->
       <div class="error-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="8" x2="12" y2="12"/>
-          <line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 32 32"><g fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 17.5v-8M29 16a13 13 0 1 1-26 0a13 13 0 0 1 26 0Z"/><path fill="currentColor" d="M17 22a1 1 0 1 1-2 0a1 1 0 0 1 2 0Z"/></g></svg>
       </div>
       
       <!-- 错误信息 -->

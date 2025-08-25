@@ -104,7 +104,6 @@ onUnmounted(() => {
 }
 
 .nav-container {
-  max-width: var(--container-xl);
   margin: 0 auto;
   padding: 0 var(--spacing-lg);
   display: flex;

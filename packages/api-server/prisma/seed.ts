@@ -14,7 +14,7 @@ async function main() {
     update: {},
     create: {
       email: "fanmengwen@gmail.com",
-      name: "范梦文",
+      name: "fanmengwen",
       password: hashedPassword,
     },
   });
