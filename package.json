@@ -6,7 +6,7 @@
     "dev": "pnpm --parallel --filter \"./packages/**\" dev",
     "dev:docs": "pnpm --filter docs-site dev",
     "dev:api": "pnpm --filter api-server dev",
-    "dev:ai": "cd packages/ai-service && python src/main.py",
+    "dev:ai": "cd packages/ai-service && python start_optimized.py",
     "build": "pnpm --filter \"./packages/**\" build",
     "build:docs": "pnpm --filter docs-site build",
     "build:api": "pnpm --filter api-server build",
@@ -32,7 +32,15 @@
     "lint": "pnpm --parallel --filter \"./packages/**\" run lint",
     "type-check": "pnpm --parallel --filter \"./packages/**\" run type-check",
     "deps:update": "pnpm update -r",
-    "deps:outdated": "pnpm outdated -r"
+    "deps:outdated": "pnpm outdated -r",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:restart": "docker-compose restart",
+    "docker:ps": "docker-compose ps",
+    "docker:clean": "docker-compose down -v && docker system prune -f",
+    "docker:health": "bash scripts/docker-health-check.sh"
   },
   "devDependencies": {
     "@types/node": "^20.10.6",

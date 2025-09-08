@@ -1,0 +1,37 @@
+{
+    "version": 2,
+    "functions": {
+      "packages/api-server/src/index.ts": {
+        "runtime": "@vercel/node"
+      },
+      "packages/ai-service/src/main.py": {
+        "runtime": "vercel-python@3.11"
+      }
+    },
+    "rewrites": [
+      {
+        "source": "/api/chat",
+        "destination": "/packages/ai-service/src/main.py"
+      },
+      {
+        "source": "/api/vector-store/:path*",
+        "destination": "/packages/ai-service/src/main.py"
+      },
+      {
+        "source": "/health",
+        "destination": "/packages/ai-service/src/main.py"
+      },
+      {
+        "source": "/system-info",
+        "destination": "/packages/ai-service/src/main.py"
+      },
+      {
+        "source": "/api/:path*",
+        "destination": "/packages/api-server/src/index.ts"
+      },
+      {
+        "source": "/(.*)",
+        "destination": "/index.html"
+      }
+    ]
+  }
