@@ -1,0 +1,147 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.poetry/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output/
+
+# Grunt intermediate storage
+.grunt/
+
+# Bower dependency directory
+bower_components/
+
+# Build outputs
+# dist/
+dist-prerender/
+build/
+.next/
+out/
+
+# Temporary folders
+tmp/
+temp/
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Documentation
+*.md
+
+# Test files
+test/
+tests/
+__tests__/
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+
+# Configuration files (keep only necessary ones)
+.eslintrc*
+.prettierrc*
+.editorconfig
+.npmrc
+.yarnrc
+.browserslistrc
+
+# Misc
+.cache/
+.parcel-cache/
+.sass-cache/
+*.tgz
+*.tar.gz
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# AI service specific
+packages/ai-service/data/chroma_db/
+packages/ai-service/logs/
+
+# API server specific
+packages/api-server/prisma/dev.db
+packages/api-server/prisma/test.db
+packages/api-server/prisma/prisma/
+
+# Frontend specific
+# packages/docs-site/dist/
+packages/docs-site/dist-prerender/
