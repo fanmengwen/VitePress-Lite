@@ -4,26 +4,26 @@
       "packages/api-server/src/index.ts": {
         "runtime": "@vercel/node"
       },
-      "packages/ai-service/src/main.py": {
+      "packages/ai-service/src/start_optimized.py": {
         "runtime": "vercel-python@3.11"
       }
     },
     "rewrites": [
       {
         "source": "/api/chat",
-        "destination": "/packages/ai-service/src/main.py"
+        "destination": "/packages/ai-service/src/start_optimized.py"
       },
       {
         "source": "/api/vector-store/:path*",
-        "destination": "/packages/ai-service/src/main.py"
+        "destination": "/packages/ai-service/src/start_optimized.py"
       },
       {
         "source": "/health",
-        "destination": "/packages/ai-service/src/main.py"
+        "destination": "/packages/ai-service/src/start_optimized.py"
       },
       {
         "source": "/system-info",
-        "destination": "/packages/ai-service/src/main.py"
+        "destination": "/packages/ai-service/src/start_optimized.py"
       },
       {
         "source": "/api/:path*",
