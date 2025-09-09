@@ -33,6 +33,7 @@ export default defineConfig({
   ],
   server: {
     port: 5173,
+    allowedHosts: ["localhost", "127.0.0.1", "0.0.0.0", "fanmengwen.com"],
     // 配置SPA fallback，确保所有未匹配的路由都返回index.html
     historyApiFallback: {
       rewrites: [

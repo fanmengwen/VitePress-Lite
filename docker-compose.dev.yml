@@ -13,7 +13,6 @@ services:
       - PYTHONUNBUFFERED=1
       - HOST=0.0.0.0
       - DOCS_PATH=/app/docs
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
     volumes:
       - ./packages/ai-service:/app
       - ./docs:/app/docs

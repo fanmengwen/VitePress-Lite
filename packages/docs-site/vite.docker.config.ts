@@ -26,6 +26,7 @@ export default defineConfig({
   ],
   server: {
     host: true, // 0.0.0.0
+    allowedHosts: ["localhost", "127.0.0.1", "0.0.0.0", "fanmengwen.com"],
     port: 5173,
     proxy: {
       // AI service endpoints
