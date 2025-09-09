@@ -11,10 +11,6 @@ node_modules
 dist
 dist-ssr
 dist-prerender
-<<<<<<< Updated upstream
-
-=======
->>>>>>> Stashed changes
 *.local
 *.env
 __pycache__

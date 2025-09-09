@@ -1,0 +1,31 @@
+# Reduce build context size
+.git
+.gitignore
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.mypy_cache
+.venv
+venv
+env
+*.egg-info
+dist
+build
+node_modules
+.DS_Store
+
+# Local data, logs, caches
+data/
+logs/
+*.log
+
+# Not needed in dev image
+tests/
+poetry.lock
+pyproject.toml
+README.md
+optimization_results.md
+docs/
+

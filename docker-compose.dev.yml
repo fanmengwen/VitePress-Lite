@@ -18,7 +18,7 @@ services:
       - ./packages/ai-service:/app
       - ./docs:/app/docs
       - ai_data:/app/data
-    command: sh -c "pip install -r requirements.txt && python scripts/ingest.py --clear && python start_optimized.py"
+    command: sh -c "python scripts/ingest.py --clear && python start_optimized.py"
     ports:
       - "8000:8000"
     healthcheck:
@@ -40,11 +40,9 @@ services:
       - DATABASE_URL=file:./prisma/dev.db
     volumes:
       - ./:/workspace
-      - /workspace/packages/api-server/node_modules
     working_dir: /workspace/packages/api-server
     command: >
-      sh -c "pnpm install --force && 
-             pnpm db:generate && 
+      sh -c "pnpm db:generate && 
              pnpm db:migrate && # 【修正】使用你定义的 db:migrate 脚本
              pnpm db:sync && 
              pnpm db:seed && 
@@ -63,9 +61,8 @@ services:
       - VITE_API_BASE_URL=/api
     volumes:
       - ./:/workspace
-      - /workspace/packages/docs-site/node_modules
     working_dir: /workspace/packages/docs-site
-    command: sh -c "pnpm install --force && pnpm vite --config vite.docker.config.ts --host" # 【修正】添加 --force 标志
+    command: sh -c "pnpm vite --config vite.docker.config.ts --host"
     ports:
       - "5173:5173"
 
