@@ -605,7 +605,7 @@ pnpm db:generate
 ### Docker 部署
 
 ```dockerfile
-FROM node:18-alpine
+FROM node:22-alpine
 WORKDIR /app
 COPY package*.json ./
 RUN pnpm install --only=production

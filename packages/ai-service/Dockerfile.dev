@@ -1,0 +1,28 @@
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /app
+
+# System deps for some packages (onnxruntime, etc.)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install (cache-friendly)
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy code
+COPY src/ ./src/
+COPY scripts/ ./scripts/
+COPY performance_config.py ./
+
+EXPOSE 8000
+
+# Default dev command; compose overrides to ensure PYTHONPATH & hot-reload friendly
+CMD ["python", "src/main.py"]
+
+

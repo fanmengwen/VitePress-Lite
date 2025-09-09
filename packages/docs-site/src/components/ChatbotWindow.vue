@@ -987,7 +987,6 @@ onMounted(() => {
 
 /* Message Content Formatting */
 .message-text :deep(.code-block) {
-  background: #2d2d2d;
   color: #f8f8f2;
   padding: 1rem;
   border-radius: 8px;

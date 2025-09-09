@@ -22,7 +22,7 @@ chroma_db
 
 # TypeScript build info
 *.tsbuildinfo
-
+.pnpm-store
 # Package lock files (keep pnpm-lock.yaml only)
 package-lock.json
 yarn.lock

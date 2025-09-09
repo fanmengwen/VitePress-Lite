@@ -111,7 +111,8 @@ class RAGPipeline:
         try:
             # 智能查询意图识别
             query_intent = self._analyze_query_intent(query)
-            metadata_filter = self._build_metadata_filter(query_intent)
+            # 目前不使用元数据预过滤，统一在二次过滤阶段处理
+            metadata_filter = None
             
             # 执行语义搜索
             results = await vector_store.search_similar(
@@ -256,6 +257,9 @@ Relevance: {score:.2f}
         version_keywords = ['版本', 'version', '发布', 'release', '更新', 'update', 
                            'announcing', '新特性', 'feature', '变更', 'change']
         
+        # 对比/比较相关关键词
+        comparison_keywords = ['对比', '比较', '差异', '区别', 'vs', 'versus', '差别']
+        
         # 概念学习相关关键词
         concept_keywords = ['是什么', '什么是', 'what is', '如何', 'how', '为什么', 'why',
                            '原理', 'principle', '机制', 'mechanism']
@@ -267,6 +271,8 @@ Relevance: {score:.2f}
         # 匹配意图
         if any(keyword in query_lower for keyword in config_keywords):
             return 'configuration'
+        elif any(keyword in query_lower for keyword in comparison_keywords):
+            return 'comparison'
         elif any(keyword in query_lower for keyword in version_keywords):
             return 'version_release'
         elif any(keyword in query_lower for keyword in concept_keywords):
@@ -275,13 +281,6 @@ Relevance: {score:.2f}
             return 'performance'
         else:
             return 'general'
-    
-    def _build_metadata_filter(self, query_intent: str) -> Optional[Dict[str, Any]]:
-        """根据查询意图构建元数据过滤条件."""
-        
-        # ChromaDB 使用简单的键值对过滤，暂时禁用复杂过滤
-        # 将在后续的二次过滤中实现精确匹配
-        return None  # 使用后续的二次过滤替代元数据预过滤
     
     def _post_filter_results(
         self, 
@@ -332,6 +331,25 @@ Relevance: {score:.2f}
             if '05-version' in doc_path and 'announcing' in doc_path:
                 boost -= 0.3
                 
+        elif query_intent == 'comparison':
+            # 比较类问题优先基础与核心概念文档
+            if '01-getting-started' in doc_path or '02-core-concepts' in doc_path:
+                boost += 0.25
+            # 强烈惩罚版本发布/公告类文档
+            if '05-version' in doc_path or 'announcing' in doc_path:
+                boost -= 0.4
+            
+            # 内容关键词微调：对比/差异相关字样小幅加分
+            comparison_terms = ['对比', '比较', '差异', '区别', 'difference', 'vs', 'versus']
+            content_lower = chunk.content.lower()
+            matches = sum(1 for term in comparison_terms if term in content_lower or term in title_lower)
+            boost += min(matches * 0.05, 0.1)
+            
+            # 发布/变更类词汇小幅降分
+            release_terms = ['release', 'released', 'announcing', 'changelog', 'breaking change', '变更', '发布']
+            penalties = sum(1 for term in release_terms if term in content_lower or term in title_lower)
+            boost -= min(penalties * 0.05, 0.15)
+
         elif query_intent == 'version_release':
             if '05-version' in doc_path:
                 boost += 0.2
@@ -342,6 +360,9 @@ Relevance: {score:.2f}
         elif query_intent == 'concept_learning':
             if '01-getting-started' in doc_path or '02-core-concepts' in doc_path:
                 boost += 0.2
+            # 概念类问题避免版本公告
+            if '05-version' in doc_path or 'announcing' in doc_path:
+                boost -= 0.2
                 
         elif query_intent == 'performance':
             if '04-seo-performance' in doc_path:

@@ -1,0 +1,74 @@
+# /docker-compose.dev.yml (最终修正版)
+version: "3.9"
+
+services:
+  # AI 服务 (保持不变)
+  ai-service:
+    image: vitepress-lite-ai-dev
+    build:
+      context: ./packages/ai-service
+      dockerfile: Dockerfile.dev
+    environment:
+      - ENVIRONMENT=development
+      - PYTHONUNBUFFERED=1
+      - HOST=0.0.0.0
+      - DOCS_PATH=/app/docs
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - ./packages/ai-service:/app
+      - ./docs:/app/docs
+      - ai_data:/app/data
+    command: sh -c "pip install -r requirements.txt && python scripts/ingest.py --clear && python start_optimized.py"
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # API 服务 (已修正)
+  api-server:
+    image: vitepress-lite-api-dev
+    build:
+      context: .
+      dockerfile: packages/api-server/Dockerfile.dev
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - SWAGGER_ENABLED=true
+      - DATABASE_URL=file:./prisma/dev.db
+    volumes:
+      - ./:/workspace
+      - /workspace/packages/api-server/node_modules
+    working_dir: /workspace/packages/api-server
+    command: >
+      sh -c "pnpm install --force && 
+             pnpm db:generate && 
+             pnpm db:migrate && # 【修正】使用你定义的 db:migrate 脚本
+             pnpm db:sync && 
+             pnpm db:seed && 
+             pnpm dev"
+    ports:
+      - "3001:3001"
+
+  # 前端文档站点 (已修正)
+  docs-site:
+    image: vitepress-lite-docs-dev
+    build:
+      context: .
+      dockerfile: packages/docs-site/Dockerfile.dev
+    environment:
+      - NODE_ENV=development
+      - VITE_API_BASE_URL=/api
+    volumes:
+      - ./:/workspace
+      - /workspace/packages/docs-site/node_modules
+    working_dir: /workspace/packages/docs-site
+    command: sh -c "pnpm install --force && pnpm vite --config vite.docker.config.ts --host" # 【修正】添加 --force 标志
+    ports:
+      - "5173:5173"
+
+volumes:
+  ai_data:
+    driver: local
