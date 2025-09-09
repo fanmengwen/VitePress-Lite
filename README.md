@@ -2,6 +2,10 @@
 
 > 基于 Vue 3 + Vite 的现代化文档平台，提供 Express API 与 AI（RAG）问答服务
 
+## 线上地址
+
+[线上预览](https://fanmengwen.com)
+
 ## 🎯 项目概述
 
 VitePress-Lite 采用“**文件为源，数据库为本**”的混合架构：
