@@ -6,7 +6,7 @@
     "dev": "pnpm --parallel --filter \"./packages/**\" dev",
     "dev:docs": "pnpm --filter docs-site dev",
     "dev:api": "pnpm --filter api-server dev",
-    "dev:ai": "cd packages/ai-service && python start_optimized.py",
+    "dev:ai": "cd packages/ai-service && PYTHONPATH=. python src/main.py",
     "build": "pnpm --filter \"./packages/**\" build",
     "build:docs": "pnpm --filter docs-site build",
     "build:api": "pnpm --filter api-server build",
