@@ -51,14 +51,14 @@
             class="search-input"
             @input="handleSearch"
           />
-          <button
+          <span
             v-if="searchQuery"
             class="clear-search"
             @click="clearSearch"
             aria-label="清除搜索"
           >
             ×
-          </button>
+          </span>
         </div>
       </div>
 
@@ -482,21 +482,15 @@ watch(() => router.currentRoute.value.path, (newPath) => {
   position: absolute;
   right: var(--spacing-sm);
   width: 20px;
-  height: 20px;
-  background: var(--color-bg-tertiary);
   border: none;
   border-radius: 50%;
   cursor: pointer;
   color: var(--color-text-secondary);
   font-size: var(--font-size-lg);
   line-height: 1;
-  transition: var(--transition-fast);
+
 }
 
-.clear-search:hover {
-  background: var(--color-danger);
-  color: white;
-}
 
 /* === 导航内容 === */
 .sidebar-nav {

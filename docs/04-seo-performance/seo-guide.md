@@ -1,5 +1,5 @@
 ---
-title: "VitePress Lite SEO 优化指南"
+title: "【VitePress Lite SEO 优化指南】"
 description: "了解如何使用 VitePress Lite 的 SEO 功能来提升您网站的搜索引擎排名和可见性"
 keywords: "SEO,搜索引擎优化,VitePress,站点地图,robots.txt,meta标签"
 author: "VitePress Lite Team"
@@ -8,6 +8,7 @@ category: "文档"
 tags: ["SEO", "优化", "搜索引擎"]
 image: "/og-image.jpg"
 type: "article"
+published: true
 ---
 
 # VitePress Lite SEO 优化指南

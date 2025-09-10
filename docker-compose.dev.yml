@@ -42,7 +42,7 @@ services:
     working_dir: /workspace/packages/api-server
     command: >
       sh -c "pnpm db:generate && 
-             pnpm db:migrate && # 【修正】使用你定义的 db:migrate 脚本
+             pnpm db:migrate && 
              pnpm db:sync && 
              pnpm db:seed && 
              pnpm dev"

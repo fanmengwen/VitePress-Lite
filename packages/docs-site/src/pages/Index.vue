@@ -1,5 +1,6 @@
 <template>
   <div class="home-page">
+    <GlobalNav />
     <!-- Hero Section -->
     <section class="hero-section">
       <div class="hero-background">
@@ -56,7 +57,7 @@
         
         <div class="hero-stats">
           <div class="stat-item">
-            <div class="stat-number">{{ documentCount }}</div>
+            <div class="stat-number">{{ documentCount - 1 }}</div>
             <div class="stat-label">文档数量</div>
           </div>
           <div class="stat-divider"></div>
@@ -143,6 +144,8 @@ import { computed } from 'vue';
 import MarkdownList from "../components/MarkdownList.vue";
 import ChatbotWindow from "../components/ChatbotWindow.vue";
 import usePostsData from "@/composables/usePostsData";
+import GlobalNav from '../components/common/GlobalNav.vue'
+
 import router from "../router";
 
 // 获取文档和文章数据用于统计

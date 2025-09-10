@@ -118,11 +118,11 @@
         </div>
 
         <!-- Error Message -->
-        <div v-if="errorMessage" class="message error-message">
+        <div v-if="errorMessage && lastQuestion" class="message error-message">
           <div class="message-avatar">⚠️</div>
           <div class="message-content">
             <div class="error-text">{{ errorMessage }}</div>
-            <button @click="retryLastQuestion" class="retry-btn">重试</button>
+            <button @click="retryLastQuestion" class="retry-btn" >重试</button>
           </div>
         </div>
       </div>

@@ -2,6 +2,8 @@
 title: 【Vite 知识体系·权威精炼版】
 date: "2025-07-22"
 author: "meng"
+published: true
+excerpt: "Vite 知识体系·权威精炼版"
 tags: ["Vite", "Plugin", "Markdown"]
 ---
 
