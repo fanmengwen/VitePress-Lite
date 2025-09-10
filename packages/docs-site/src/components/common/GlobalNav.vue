@@ -21,6 +21,10 @@
           <span class="nav-icon">🏠</span>
           <span>首页</span>
         </router-link>
+        <router-link v-if="docsHomePath" :to="docsHomePath" class="nav-item" active-class="active">
+          <span class="nav-icon">📖</span>
+          <span>文档</span>
+        </router-link>
         <a
           :href="githubUrl"
           class="nav-item"
@@ -56,6 +60,10 @@
             <span class="nav-icon">🏠</span>
             <span>首页</span>
           </router-link>
+          <router-link v-if="docsHomePath" :to="docsHomePath" class="mobile-nav-item" @click="closeMobileMenu">
+            <span class="nav-icon">📖</span>
+            <span>文档</span>
+          </router-link>
           <a
             v-if="githubUrl"
             :href="githubUrl"
@@ -77,12 +85,46 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 
 // 响应式状态
 const isScrolled = ref(false)
 const isMobileMenuOpen = ref(false)
 const githubUrl = (import.meta.env.VITE_GITHUB_REPO_URL as string) || 'https://github.com/fanmengwen/VitePress-Lite'
+
+// 路由实例
+const router = useRouter()
+
+// 计算第一个文档路径（优先使用重定向路径，否则使用第一个子路由路径）
+const computeDocsHomePath = (routes: any[]): string => {
+  const candidates = (routes || []).filter((route: any) => {
+    return route?.path && route.path !== '/' && route.path !== '/:pathMatch(.*)*' && !route.hidden
+  })
+
+  if (candidates.length === 0) return '/'
+
+  const first = candidates[0]
+
+  if (typeof first.redirect === 'string') {
+    return first.redirect
+  }
+
+  if (first.redirect && typeof first.redirect === 'object' && 'path' in first.redirect && first.redirect.path) {
+    return first.redirect.path as string
+  }
+
+  if (Array.isArray(first.children) && first.children.length > 0) {
+    const child = first.children.find((c: any) => c && !c.hidden && typeof c.path === 'string' && c.path)
+    if (child?.path) return child.path as string
+  }
+
+  if (typeof first.path === 'string') return first.path
+
+  return '/'
+}
+
+const docsHomePath = computed(() => computeDocsHomePath((router?.options?.routes as any[]) || []))
 
 // 方法
 const toggleMobileMenu = () => {
