@@ -30,8 +30,8 @@ class Settings(BaseSettings):
     )
     
     # LLM Configuration
-    llm_provider: Literal["openai", "aliyun", "deepseek", "local", "ollama"] = Field(
-        default="openai", description="LLM provider to use"
+    llm_provider: Literal["auto", "openai", "aliyun", "deepseek", "local", "ollama"] = Field(
+        default="auto", description="LLM provider to use (auto selects by available API keys)"
     )
     
     # OpenAI Configuration
@@ -154,7 +154,20 @@ class Settings(BaseSettings):
     
     def get_llm_config(self) -> dict:
         """Get LLM configuration based on provider."""
-        if self.llm_provider == "openai":
+        provider = self.llm_provider
+
+        # Auto-select provider by available API keys
+        if provider == "auto":
+            if self.aliyun_api_key:
+                provider = "aliyun"
+            elif self.deepseek_api_key:
+                provider = "deepseek"
+            elif self.openai_api_key:
+                provider = "openai"
+            else:
+                raise ValueError("No LLM API key configured. Set ALIYUN_API_KEY / OPENAI_API_KEY / DEEPSEEK_API_KEY in .env")
+
+        if provider == "openai":
             return {
                 "provider": "openai",
                 "api_key": self.openai_api_key,
@@ -163,7 +176,7 @@ class Settings(BaseSettings):
                 "max_tokens": self.openai_max_tokens,
                 "base_url": None,  # 使用默认 OpenAI URL
             }
-        elif self.llm_provider == "aliyun":
+        elif provider == "aliyun":
             return {
                 "provider": "aliyun",
                 "api_key": self.aliyun_api_key,
@@ -172,7 +185,7 @@ class Settings(BaseSettings):
                 "max_tokens": self.openai_max_tokens,
                 "base_url": self.aliyun_base_url,
             }
-        elif self.llm_provider == "deepseek":
+        elif provider == "deepseek":
             return {
                 "provider": "deepseek",
                 "api_key": self.deepseek_api_key,
@@ -182,7 +195,7 @@ class Settings(BaseSettings):
                 "base_url": self.deepseek_base_url,
             }
         else:
-            raise ValueError(f"Unsupported LLM provider: {self.llm_provider}")
+            raise ValueError(f"Unsupported LLM provider: {provider}")
 
 
 # Global settings instance

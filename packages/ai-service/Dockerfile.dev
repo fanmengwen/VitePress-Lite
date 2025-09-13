@@ -23,6 +23,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy code
 COPY src/ ./src/
+COPY .env ./.env
 COPY scripts/ ./scripts/
 COPY performance_config.py ./
 

@@ -70,6 +70,17 @@ export interface AISystemInfo {
   };
 }
 
+export interface VectorSearchRequest {
+  query: string;
+  top_k?: number;
+  similarity_threshold?: number;
+}
+
+export interface VectorSearchResponse {
+  sources: SourceReference[];
+  took_ms: number;
+}
+
 // AI API Client
 class AIApiClient {
   private baseURL: string;
@@ -108,6 +119,18 @@ class AIApiClient {
       }
       throw error;
     }
+  }
+
+  /**
+   * Vector search first for progressive UI
+   */
+  async vectorSearch(request: VectorSearchRequest): Promise<VectorSearchResponse> {
+    const response = await axios.post<VectorSearchResponse>(
+      `${this.baseURL}/vector-search`,
+      request,
+      { headers: { 'Content-Type': 'application/json' }, timeout: 15000 }
+    );
+    return response.data;
   }
 
   /**

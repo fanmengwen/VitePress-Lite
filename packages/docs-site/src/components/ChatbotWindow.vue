@@ -44,6 +44,14 @@
 
       <!-- Messages Container -->
       <div class="messages-container" ref="messagesContainer">
+        <!-- Step badges / progress -->
+        <div v-if="progress.stage" class="progress-bar">
+          <div class="progress-dot" :class="{ done: progress.stage !== 'retrieve' }">1</div>
+          <span :class="{ active: progress.stage === 'retrieve' }">检索</span>
+          <div class="progress-line" :class="{ done: progress.stage !== 'retrieve' }"></div>
+          <div class="progress-dot" :class="{ done: progress.stage === 'done' }">2</div>
+          <span :class="{ active: progress.stage === 'generate' }">生成</span>
+        </div>
         <!-- Welcome Message -->
         <div v-if="messages.length === 0" class="welcome-message">
           <div class="ai-message">
@@ -203,6 +211,7 @@ const currentInput = ref('');
 const messages = ref<(ChatMessage & { sources?: SourceReference[] })[]>([]);
 const showSources = ref(true);
 const lastQuestion = ref('');
+const progress = ref<{ stage: 'retrieve' | 'generate' | 'done' | '' }>({ stage: '' });
 
 // Refs for DOM elements
 const messagesContainer = ref<HTMLElement | null>(null);
@@ -293,6 +302,16 @@ const sendMessage = async () => {
   await scrollToBottom();
 
   try {
+    progress.value.stage = 'retrieve';
+    // 1) vector search first: show sources immediately when available
+    let retrievedSources: SourceReference[] = [];
+    try {
+      const vs = await aiApiClient.vectorSearch({ query: question, top_k: 3 });
+      retrievedSources = vs.sources || [];
+    } catch (_) {
+      // ignore vector search failure; proceed to chat
+    }
+
     // Prepare chat history
     const history = messages.value.slice(-10).map(msg => ({
       role: msg.role,
@@ -300,7 +319,19 @@ const sendMessage = async () => {
       timestamp: msg.timestamp,
     }));
 
-    // Call AI service
+    // Show a staged system message to indicate progress
+    if (retrievedSources.length > 0 && showSources.value) {
+      messages.value.push({
+        role: 'assistant',
+        content: '已根据知识库检索到相关文档，正在整理回答…',
+        timestamp: new Date().toISOString(),
+        sources: retrievedSources,
+      } as any);
+      await scrollToBottom();
+    }
+
+    progress.value.stage = 'generate';
+    // 2) call AI to generate the final answer
     const response: ChatResponse = await aiApiClient.chat({
       question,
       history,
@@ -308,14 +339,28 @@ const sendMessage = async () => {
       temperature: 0.1,
     });
 
-    // Add AI response
+    // Merge sources (vector-search + final)
+    const mergedSources = (response.sources && response.sources.length > 0)
+      ? response.sources
+      : retrievedSources;
+
+    // Replace the staged system message if it exists
+    const stagedIndex = messages.value.findIndex(
+      (m) => m.role === 'assistant' && m.content.includes('正在整理回答')
+    );
+    if (stagedIndex !== -1) {
+      messages.value.splice(stagedIndex, 1);
+    }
+
+    // 3) push final AI message with sources
     const aiMessage = {
       role: 'assistant' as const,
       content: response.answer,
       timestamp: new Date().toISOString(),
-      sources: response.sources,
+      sources: mergedSources,
     };
     messages.value.push(aiMessage);
+    progress.value.stage = 'done';
 
   } catch (error) {
     hasError.value = true;
@@ -622,6 +667,13 @@ defineExpose({ ask, open, close });
   flex-direction: column;
   gap: 1rem;
 }
+
+.progress-bar { display: flex; align-items: center; gap: 8px; justify-content: center; margin-bottom: 4px; color: #8a8a8a; font-size: 12px; }
+.progress-dot { width: 16px; height: 16px; border-radius: 50%; background: #d9d9d9; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 10px; }
+.progress-dot.done { background: #667eea; }
+.progress-line { height: 2px; width: 60px; background: #d9d9d9; }
+.progress-line.done { background: #667eea; }
+.progress-bar .active { color: #333; }
 
 .message {
   display: flex;

@@ -15,7 +15,7 @@ from loguru import logger
 import uvicorn
 
 from src.config.settings import settings
-from src.models.chat import ChatRequest, ChatResponse, HealthResponse, ErrorResponse
+from src.models.chat import ChatRequest, ChatResponse, HealthResponse, ErrorResponse, VectorSearchRequest, VectorSearchResponse
 from src.services.rag import rag_pipeline
 from src.services.vector_store import vector_store
 from src.services.embedding import embedding_service
@@ -280,6 +280,21 @@ def setup_logging():
         level=settings.log_level,
         colorize=True
     )
+
+
+# Progressive UI: vector search first
+@app.post(f"{settings.api_prefix}/vector-search", response_model=VectorSearchResponse)
+async def vector_search(request: VectorSearchRequest) -> VectorSearchResponse:
+    start = time.time()
+    try:
+        # reuse rag internal retrieval
+        results = await rag_pipeline._retrieve_documents(request.query, top_k=request.top_k, similarity_threshold=request.similarity_threshold or settings.similarity_threshold)
+        sources = rag_pipeline._create_source_references(results)
+        took_ms = int((time.time() - start) * 1000)
+        return VectorSearchResponse(sources=sources, took_ms=took_ms)
+    except Exception as e:
+        logger.error(f"Vector search failed: {e}")
+        return VectorSearchResponse(sources=[], took_ms=int((time.time() - start) * 1000))
     
     # Add file logging in production
     if settings.is_production():

@@ -79,6 +79,18 @@ class ChatResponse(BaseModel):
     )
 
 
+# Vector search only request/response for progressive UI
+class VectorSearchRequest(BaseModel):
+    query: str = Field(..., min_length=1, description="Query text")
+    top_k: int = Field(default=3, ge=1, le=10)
+    similarity_threshold: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+
+
+class VectorSearchResponse(BaseModel):
+    sources: List[SourceReference] = Field(default_factory=list)
+    took_ms: int = Field(..., description="Elapsed time in ms")
+
+
 class HealthResponse(BaseModel):
     """Health check response model."""
     
