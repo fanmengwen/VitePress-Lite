@@ -3,9 +3,9 @@
     <SideNav />
     <main class="home-main">
       <div class="home-center">
-        <h1 class="slogan"><span class="em">用提问</span>发现世界</h1>
+        <h1 v-show="!showChat" class="slogan"><span class="em">用提问</span>发现世界</h1>
 
-        <div class="ask-card">
+        <div v-show="!showChat" class="ask-card">
           <div class="ask-input-wrap">
             <input
               v-model="askText"
@@ -32,7 +32,7 @@
           </div>
         </div>
 
-        <div class="suggestions">
+        <div v-show="!showChat" class="suggestions">
           <button class="chip" v-for="q in quickQuestions" :key="q" @click="onAskQuick(q)">{{ q }}</button>
         </div>
 
@@ -41,7 +41,7 @@
             ref="chatRef"
             :inline="true"
             :hideCompact="true"
-            :inlineHeight="420"
+            :inlineHeight="600"
             :autoExpand="true"
           />
         </div>
@@ -142,10 +142,17 @@ const onAskQuick = (q: string) => {
 .ask-right { display: flex; align-items: center; gap: 8px; }
 .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--color-border-default); display: inline-block; }
 
-.suggestions { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-.chip { border: 1px solid var(--color-border-light); background: var(--color-bg-secondary); border-radius: 999px; padding: 6px 12px; font-size: 12px; cursor: pointer; }
+.suggestions { margin-top: 12px; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; padding: 8px 12px; background: linear-gradient(180deg, rgba(0,0,0,0.03), rgba(0,0,0,0)); border-radius: 12px; }
+.chip { border: 1px solid rgba(0,0,0,0.06); background: #fff; color: var(--color-text-secondary); border-radius: 999px; padding: 8px 14px; font-size: 13px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.chip:hover { background: var(--color-primary-50); color: var(--color-primary); border-color: var(--color-primary-100); }
 
-.chat-area { margin-top: 16px; width: 100%; }
+.chat-area { 
+  margin-top: 16px; 
+  width: 100%; 
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
 
 .home-footer { height: 48px; display: flex; align-items: center; gap: 8px; color: var(--color-text-tertiary); font-size: 12px; }
 

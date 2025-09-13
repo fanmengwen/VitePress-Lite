@@ -22,8 +22,8 @@
 
     <!-- Expanded State -->
     <div v-else class="chatbot-expanded" :style="inline ? { height: `${inlineHeight}px`, width: '100%', maxWidth: '860px', margin: '0 auto' } : {}">
-      <!-- Header -->
-      <div class="chat-header">
+      <!-- Header (hidden in inline/perplexity mode) -->
+      <div class="chat-header" v-if="!inline">
         <div class="header-info">
           <span class="ai-avatar">🤖</span>
           <div class="header-text">
@@ -40,6 +40,11 @@
         >
           ✕
         </button>
+      </div>
+
+      <!-- Sticky Question Header for Inline Mode -->
+      <div v-if="inline && currentQuestion" class="sticky-question-header">
+        <h1 class="question-title">{{ currentQuestion }}</h1>
       </div>
 
       <!-- Messages Container -->
@@ -90,23 +95,22 @@
             <div class="message-text" v-html="formatMessage(message.content)"></div>
             <div class="message-time">{{ formatTime(message.timestamp) }}</div>
             
-            <!-- Sources for AI messages -->
-            <div v-if="message.sources && message.sources.length > 0" class="message-sources">
-              <h5>📚 参考资料：</h5>
-              <div class="sources-list">
+            <!-- Sources for AI messages - Perplexity Style -->
+            <div v-if="message.sources && message.sources.length > 0" class="message-sources perplexity-sources">
+              <h5 class="sources-header">📚 参考资料：</h5>
+              <div class="sources-grid">
                 <div 
-                  v-for="source in message.sources" 
+                  v-for="(source, index) in message.sources" 
                   :key="source.file_path + source.chunk_index"
-                  class="source-item clickable"
+                  class="source-card"
                   @click="navigateToSource(source)"
                   :title="`点击跳转到：${source.title}`"
                 >
-                  <span class="source-title">
-                    <span class="source-icon">📄</span>
-                    {{ source.title }}
-                  </span>
-                  <span class="source-score">相似度: {{ Math.round(source.similarity_score * 100) }}%</span>
-                  <span class="source-link-icon">🔗</span>
+                  <div class="source-number">{{ index + 1 }}</div>
+                  <div class="source-content">
+                    <div class="source-title">{{ source.title }}</div>
+                    <div class="source-score">相似度: {{ Math.round(source.similarity_score * 100) }}%</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -160,16 +164,6 @@
             </button>
           </div>
         </form>
-        
-        <!-- Quick Actions -->
-        <div class="quick-actions">
-          <button @click="clearChat" class="action-btn clear-btn">
-            🗑️ 清空对话
-          </button>
-          <button @click="toggleSources" class="action-btn sources-btn">
-            {{ showSources ? '隐藏' : '显示' }}参考资料
-          </button>
-        </div>
       </div>
     </div>
   </div>
@@ -211,6 +205,7 @@ const currentInput = ref('');
 const messages = ref<(ChatMessage & { sources?: SourceReference[] })[]>([]);
 const showSources = ref(true);
 const lastQuestion = ref('');
+const currentQuestion = ref('');
 const progress = ref<{ stage: 'retrieve' | 'generate' | 'done' | '' }>({ stage: '' });
 
 // Refs for DOM elements
@@ -286,6 +281,7 @@ const sendMessage = async () => {
   if (!question || isLoading.value) return;
 
   lastQuestion.value = question;
+  currentQuestion.value = question;
   currentInput.value = '';
   isLoading.value = true;
   hasError.value = false;
@@ -498,6 +494,7 @@ onMounted(() => {
 const ask = async (question: string) => {
   if (!question) return;
   isExpanded.value = true;
+  currentQuestion.value = question;
   await nextTick();
   currentInput.value = question;
   await sendMessage();
@@ -598,6 +595,40 @@ defineExpose({ ask, open, close });
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+/* Inline mode seamless styling */
+.chatbot-window.inline-mode .chatbot-expanded {
+  background: transparent;
+  backdrop-filter: none;
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
+  width: 100%;
+  height: auto;
+  min-height: 500px;
+  max-height: 80vh;
+}
+
+/* Sticky Question Header */
+.sticky-question-header {
+  position: sticky;
+  top: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 20px 0;
+  margin-bottom: 32px;
+  z-index: 100;
+}
+
+.question-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #2d3748;
+  margin: 0;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
 @media (prefers-color-scheme: dark) {
   .chatbot-expanded {
     background: rgba(40, 40, 40, 0.95);
@@ -668,6 +699,13 @@ defineExpose({ ask, open, close });
   gap: 1rem;
 }
 
+/* Inline mode messages styling */
+.chatbot-window.inline-mode .messages-container {
+  padding: 0;
+  background: transparent;
+  gap: 24px;
+}
+
 .progress-bar { display: flex; align-items: center; gap: 8px; justify-content: center; margin-bottom: 4px; color: #8a8a8a; font-size: 12px; }
 .progress-dot { width: 16px; height: 16px; border-radius: 50%; background: #d9d9d9; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 10px; }
 .progress-dot.done { background: #667eea; }
@@ -711,6 +749,120 @@ defineExpose({ ask, open, close });
   border-radius: 12px;
   line-height: 1.5;
   word-wrap: break-word;
+}
+
+/* Inline mode message styling */
+.chatbot-window.inline-mode .user-message .message-text {
+  background: transparent;
+  border: 2px solid var(--color-primary);
+  color: var(--color-primary);
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+  padding: 16px 24px;
+  margin: 16px 0;
+}
+
+.chatbot-window.inline-mode .ai-message .message-text {
+  background: transparent;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.chatbot-window.inline-mode .message-avatar {
+  display: none;
+}
+
+.chatbot-window.inline-mode .message-content {
+  max-width: 100%;
+}
+
+/* Hide welcome message in inline mode */
+.chatbot-window.inline-mode .welcome-message {
+  display: none;
+}
+
+/* Perplexity-style Sources Layout */
+.perplexity-sources {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  border-left: none !important;
+  padding: 24px 0 !important;
+  margin: 32px 0 !important;
+}
+
+.sources-header {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  color: #374151 !important;
+  margin: 0 0 16px 0 !important;
+}
+
+.sources-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.source-card {
+  display: flex;
+  align-items: flex-start;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.source-card:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.source-number {
+  background: #667eea;
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.source-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.source-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e293b;
+  line-height: 1.4;
+  margin-bottom: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.source-score {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -931,6 +1083,20 @@ defineExpose({ ask, open, close });
   border-radius: 0 0 16px 16px;
 }
 
+/* Perplexity-style Input Area */
+.chatbot-window.inline-mode .input-area {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  margin-top: 48px;
+  padding: 20px 24px;
+  position: sticky;
+  bottom: 24px;
+  z-index: 50;
+}
+
 @media (prefers-color-scheme: dark) {
   .input-area {
     background: rgba(30, 30, 30, 0.8);
@@ -964,6 +1130,157 @@ defineExpose({ ask, open, close });
 
 .message-input:focus {
   border-color: #667eea;
+}
+
+/* Perplexity-style Input Styling */
+.chatbot-window.inline-mode .message-input {
+  border: none;
+  background: transparent;
+  padding: 16px 20px;
+  font-size: 16px;
+  line-height: 1.5;
+  min-height: 24px;
+  max-height: 200px;
+  resize: none;
+  outline: none;
+  color: #1a202c;
+  font-weight: 400;
+}
+
+.chatbot-window.inline-mode .message-input::placeholder {
+  color: #a0aec0;
+  font-weight: 400;
+}
+
+.chatbot-window.inline-mode .send-btn {
+  background: #667eea;
+  border: none;
+  border-radius: 12px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 18px;
+}
+
+.chatbot-window.inline-mode .send-btn:hover:not(:disabled) {
+  background: #5a6fd8;
+  transform: scale(1.05);
+}
+
+.chatbot-window.inline-mode .send-btn:disabled {
+  background: #e2e8f0;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.chatbot-window.inline-mode .input-group {
+  align-items: center;
+  gap: 16px;
+}
+
+/* Dark mode support for Perplexity-style elements */
+@media (prefers-color-scheme: dark) {
+  .sticky-question-header {
+    background: rgba(26, 32, 44, 0.95);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+  
+  .question-title {
+    color: #f7fafc;
+  }
+  
+  .sources-header {
+    color: #e2e8f0 !important;
+  }
+  
+  .source-card {
+    background: #2d3748;
+    border-color: #4a5568;
+  }
+  
+  .source-card:hover {
+    background: #374151;
+    border-color: #6b7280;
+  }
+  
+  .source-title {
+    color: #f7fafc;
+  }
+  
+  .source-score {
+    color: #a0aec0;
+  }
+  
+  .chatbot-window.inline-mode .input-area {
+    background: rgba(26, 32, 44, 0.8);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .chatbot-window.inline-mode .message-input {
+    color: #f7fafc;
+  }
+  
+  .chatbot-window.inline-mode .message-input::placeholder {
+    color: #718096;
+  }
+}
+
+/* Mobile responsive styling */
+@media (max-width: 768px) {
+  .question-title {
+    font-size: 24px;
+  }
+  
+  .sticky-question-header {
+    padding: 16px 0;
+    margin-bottom: 24px;
+  }
+  
+  .sources-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .source-card {
+    padding: 12px;
+  }
+  
+  .source-number {
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
+    margin-right: 8px;
+  }
+  
+  .source-title {
+    font-size: 13px;
+  }
+  
+  .source-score {
+    font-size: 11px;
+  }
+  
+  .chatbot-window.inline-mode .input-area {
+    margin-top: 32px;
+    padding: 16px 20px;
+    border-radius: 20px;
+    bottom: 16px;
+  }
+  
+  .chatbot-window.inline-mode .message-input {
+    font-size: 16px;
+    padding: 12px 16px;
+  }
+  
+  .chatbot-window.inline-mode .send-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 16px;
+  }
 }
 
 @media (prefers-color-scheme: dark) {

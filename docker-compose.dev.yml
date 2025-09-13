@@ -17,7 +17,7 @@ services:
       - ./packages/ai-service:/app
       - ./docs:/app/docs
       - ai_data:/app/data
-    command: sh -c "python scripts/ingest.py --clear && python start_optimized.py"
+    command: sh -c "python start_optimized.py"
     ports:
       - "8000:8000"
     healthcheck:
