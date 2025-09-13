@@ -38,14 +38,11 @@ services:
       - SWAGGER_ENABLED=true
       - DATABASE_URL=file:./prisma/dev.db
     volumes:
-      - ./:/workspace
+      - ./packages/api-server:/workspace/packages/api-server
+      - ./docs:/workspace/docs
     working_dir: /workspace/packages/api-server
     command: >
-      sh -c "pnpm db:generate && 
-             pnpm db:migrate && 
-             pnpm db:sync && 
-             pnpm db:seed && 
-             pnpm dev"
+      sh -c "pnpm install && pnpm db:generate && pnpm db:migrate && pnpm db:sync && pnpm db:seed && pnpm dev"
     ports:
       - "3001:3001"
 
@@ -59,9 +56,10 @@ services:
       - NODE_ENV=development
       - VITE_API_BASE_URL=/api
     volumes:
-      - ./:/workspace
+      - ./packages/docs-site:/workspace/packages/docs-site
+      - ./docs:/workspace/docs
     working_dir: /workspace/packages/docs-site
-    command: sh -c "pnpm vite --config vite.docker.config.ts --host"
+    command: sh -c "pnpm install && pnpm run dev:docker"
     ports:
       - "5173:5173"
 

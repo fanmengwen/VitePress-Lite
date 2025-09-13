@@ -11,6 +11,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy requirements and install (cache-friendly)
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
