@@ -4,11 +4,12 @@
     :class="{ 
       'expanded': isExpanded, 
       'loading': isLoading,
-      'error': hasError 
+      'error': hasError,
+      'inline-mode': inline
     }"
   >
     <!-- Compact State -->
-    <div v-if="!isExpanded" class="chatbot-compact" @click="expandChat">
+    <div v-if="!isExpanded && !hideCompact" class="chatbot-compact" @click="expandChat">
       <div class="compact-content">
         <div class="ai-icon">🤖</div>
         <div class="compact-text">
@@ -20,7 +21,7 @@
     </div>
 
     <!-- Expanded State -->
-    <div v-else class="chatbot-expanded">
+    <div v-else class="chatbot-expanded" :style="inline ? { height: `${inlineHeight}px`, width: '100%', maxWidth: '860px', margin: '0 auto' } : {}">
       <!-- Header -->
       <div class="chat-header">
         <div class="header-info">
@@ -166,7 +167,6 @@
   </div>
 </template>
 
-## TODO
 <script setup lang="ts">
 import { ref, onMounted, nextTick, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
@@ -177,12 +177,18 @@ interface Props {
   autoExpand?: boolean;
   maxMessages?: number;
   persistHistory?: boolean;
+  inline?: boolean; // inline mode renders as block instead of fixed bubble
+  inlineHeight?: number; // height for inline chat area
+  hideCompact?: boolean; // hide compact bubble trigger
 }
 
 const props = withDefaults(defineProps<Props>(), {
   autoExpand: false,
   maxMessages: 100,
   persistHistory: true,
+  inline: false,
+  inlineHeight: 460,
+  hideCompact: false,
 });
 
 // Router instance
@@ -442,6 +448,27 @@ onMounted(() => {
     errorMessage.value = 'AI 服务连接失败，请稍后重试';
   });
 });
+
+// Programmatic control API
+const ask = async (question: string) => {
+  if (!question) return;
+  isExpanded.value = true;
+  await nextTick();
+  currentInput.value = question;
+  await sendMessage();
+};
+
+const open = async () => {
+  isExpanded.value = true;
+  await nextTick();
+  inputRef.value?.focus();
+};
+
+const close = () => {
+  isExpanded.value = false;
+};
+
+defineExpose({ ask, open, close });
 </script>
 
 <style scoped>
@@ -452,6 +479,14 @@ onMounted(() => {
   z-index: 1000;
   font-family: inherit;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chatbot-window.inline-mode {
+  position: relative;
+  bottom: auto;
+  right: auto;
+  left: auto;
+  z-index: auto;
 }
 
 /* Compact State */
