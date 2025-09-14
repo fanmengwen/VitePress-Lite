@@ -21,7 +21,7 @@
     </div>
 
     <!-- Expanded State -->
-    <div v-else class="chatbot-expanded" :style="inline ? { height: `${inlineHeight}px`, width: '100%', maxWidth: '860px', margin: '0 auto' } : {}">
+    <div v-else class="chatbot-expanded" :style="inline ? { height: `${inlineHeight}px`, width: '100%' } : {}">
       <!-- Header (hidden in inline/perplexity mode) -->
       <div class="chat-header" v-if="!inline">
         <div class="header-info">
@@ -42,12 +42,7 @@
         </button>
       </div>
 
-      <!-- Sticky Question Header for Inline Mode -->
-      <div v-if="inline && currentQuestion" class="sticky-question-header">
-        <h1 class="question-title">{{ currentQuestion }}</h1>
-      </div>
-
-      <!-- Messages Container -->
+        <!-- Messages Container -->
       <div class="messages-container" ref="messagesContainer">
         <!-- Step badges / progress -->
         <div v-if="progress.stage" class="progress-bar">
@@ -510,7 +505,7 @@ const close = () => {
   isExpanded.value = false;
 };
 
-defineExpose({ ask, open, close });
+defineExpose({ ask, open, close, currentQuestion });
 </script>
 
 <style scoped>
@@ -606,28 +601,11 @@ defineExpose({ ask, open, close });
   height: auto;
   min-height: 500px;
   max-height: 80vh;
-}
-
-/* Sticky Question Header */
-.sticky-question-header {
-  position: sticky;
-  top: 0;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  padding: 20px 0;
-  margin-bottom: 32px;
-  z-index: 100;
-}
-
-.question-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #2d3748;
   margin: 0;
-  line-height: 1.3;
-  letter-spacing: -0.02em;
+  padding: 0;
 }
+
+
 
 @media (prefers-color-scheme: dark) {
   .chatbot-expanded {
@@ -697,13 +675,23 @@ defineExpose({ ask, open, close });
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  width: 100%;
+}
+
+/* Hide header in inline mode */
+.chatbot-window.inline-mode .chat-header {
+  display: none;
 }
 
 /* Inline mode messages styling */
 .chatbot-window.inline-mode .messages-container {
-  padding: 0;
+  padding: 0 24px;
   background: transparent;
   gap: 24px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  box-sizing: border-box;
 }
 
 .progress-bar { display: flex; align-items: center; gap: 8px; justify-content: center; margin-bottom: 4px; color: #8a8a8a; font-size: 12px; }
@@ -756,11 +744,24 @@ defineExpose({ ask, open, close });
   background: transparent;
   border: 2px solid var(--color-primary);
   color: var(--color-primary);
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
-  text-align: center;
-  padding: 16px 24px;
-  margin: 16px 0;
+  text-align: left;
+  padding: 20px 24px;
+  margin: 32px 0 24px 0;
+  border-radius: 12px;
+  position: relative;
+}
+
+.chatbot-window.inline-mode .user-message .message-text::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: 24px;
+  width: 32px;
+  height: 4px;
+  background: var(--color-primary);
+  border-radius: 2px;
 }
 
 .chatbot-window.inline-mode .ai-message .message-text {
@@ -794,17 +795,17 @@ defineExpose({ ask, open, close });
 }
 
 .sources-header {
-  font-size: 18px !important;
+  font-size: 14px !important;
   font-weight: 600 !important;
   color: #374151 !important;
-  margin: 0 0 16px 0 !important;
+  margin: 0 0 12px 0 !important;
 }
 
 .sources-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 12px;
-  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .source-card {
@@ -812,12 +813,15 @@ defineExpose({ ask, open, close });
   align-items: flex-start;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: 8px;
+  padding: 8px 10px;
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
+  flex: 0 0 auto;
+  min-width: 120px;
+  max-width: 200px;
 }
 
 .source-card:hover {
@@ -830,15 +834,15 @@ defineExpose({ ask, open, close });
 .source-number {
   background: #667eea;
   color: white;
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 600;
-  margin-right: 12px;
+  margin-right: 8px;
   flex-shrink: 0;
 }
 
@@ -848,19 +852,19 @@ defineExpose({ ask, open, close });
 }
 
 .source-title {
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 500;
   color: #1e293b;
-  line-height: 1.4;
-  margin-bottom: 4px;
+  line-height: 1.3;
+  margin-bottom: 2px;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
 .source-score {
-  font-size: 12px;
+  font-size: 9px;
   color: #64748b;
   font-weight: 500;
 }
@@ -1085,16 +1089,20 @@ defineExpose({ ask, open, close });
 
 /* Perplexity-style Input Area */
 .chatbot-window.inline-mode .input-area {
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 24px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-  margin-top: 48px;
-  padding: 20px 24px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  margin-top: 32px;
+  padding: 8px 12px;
   position: sticky;
-  bottom: 24px;
+  bottom: 20px;
   z-index: 50;
+  max-width: 860px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -1136,11 +1144,11 @@ defineExpose({ ask, open, close });
 .chatbot-window.inline-mode .message-input {
   border: none;
   background: transparent;
-  padding: 16px 20px;
-  font-size: 16px;
-  line-height: 1.5;
-  min-height: 24px;
-  max-height: 200px;
+  padding: 8px 12px;
+  font-size: 14px;
+  line-height: 1.3;
+  min-height: 16px;
+  max-height: 80px;
   resize: none;
   outline: none;
   color: #1a202c;
@@ -1148,22 +1156,23 @@ defineExpose({ ask, open, close });
 }
 
 .chatbot-window.inline-mode .message-input::placeholder {
-  color: #a0aec0;
+  color: #9ca3af;
   font-weight: 400;
 }
 
 .chatbot-window.inline-mode .send-btn {
   background: #667eea;
   border: none;
-  border-radius: 12px;
-  width: 48px;
-  height: 48px;
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 18px;
+  font-size: 14px;
+  flex-shrink: 0;
 }
 
 .chatbot-window.inline-mode .send-btn:hover:not(:disabled) {
@@ -1179,14 +1188,14 @@ defineExpose({ ask, open, close });
 
 .chatbot-window.inline-mode .input-group {
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 /* Dark mode support for Perplexity-style elements */
 @media (prefers-color-scheme: dark) {
   .sticky-question-header {
-    background: rgba(26, 32, 44, 0.95);
-    border-bottom-color: rgba(255, 255, 255, 0.08);
+    background: var(--color-bg-primary, #1a1a1a);
+    border-bottom-color: rgba(255, 255, 255, 0.06);
   }
   
   .question-title {
@@ -1241,45 +1250,49 @@ defineExpose({ ask, open, close });
   }
   
   .sources-grid {
-    grid-template-columns: 1fr;
-    gap: 8px;
+    flex-direction: column;
+    gap: 6px;
   }
   
   .source-card {
-    padding: 12px;
+    padding: 6px 8px;
+    min-width: auto;
+    max-width: none;
   }
   
   .source-number {
-    width: 20px;
-    height: 20px;
-    font-size: 11px;
-    margin-right: 8px;
+    width: 16px;
+    height: 16px;
+    font-size: 9px;
+    margin-right: 6px;
   }
   
   .source-title {
-    font-size: 13px;
+    font-size: 10px;
   }
   
   .source-score {
-    font-size: 11px;
+    font-size: 8px;
   }
   
   .chatbot-window.inline-mode .input-area {
-    margin-top: 32px;
-    padding: 16px 20px;
-    border-radius: 20px;
-    bottom: 16px;
+    margin-top: 24px;
+    padding: 6px 10px;
+    border-radius: 14px;
+    bottom: 12px;
+    max-width: 95%;
   }
   
   .chatbot-window.inline-mode .message-input {
-    font-size: 16px;
-    padding: 12px 16px;
+    font-size: 14px;
+    padding: 6px 10px;
+    min-height: 14px;
   }
   
   .chatbot-window.inline-mode .send-btn {
-    width: 44px;
-    height: 44px;
-    font-size: 16px;
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
   }
 }
 
@@ -1523,4 +1536,4 @@ defineExpose({ ask, open, close });
     animation: none;
   }
 }
-</style> 
+</style>

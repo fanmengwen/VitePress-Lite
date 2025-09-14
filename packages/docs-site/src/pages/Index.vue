@@ -2,6 +2,11 @@
   <div class="home-viewport">
     <SideNav />
     <main class="home-main">
+      <!-- Fixed Question Title -->
+      <div v-if="showChat && chatRef?.currentQuestion" class="fixed-question-title">
+        <h1>{{ chatRef.currentQuestion }}</h1>
+      </div>
+      
       <div class="home-center">
         <h1 v-show="!showChat" class="slogan"><span class="em">用提问</span>发现世界</h1>
 
@@ -46,14 +51,6 @@
           />
         </div>
       </div>
-
-      <footer class="home-footer">
-        <span>用户协议</span>
-        <span class="dot"></span>
-        <span>隐私政策</span>
-        <span class="dot"></span>
-        <span>备案号</span>
-      </footer>
     </main>
   </div>
 </template>
@@ -90,7 +87,6 @@ const onAskQuick = (q: string) => {
 .home-viewport {
   display: flex;
   height: 100vh;
-  overflow: hidden;
   background: var(--color-bg-primary);
 }
 
@@ -100,18 +96,28 @@ const onAskQuick = (q: string) => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  overflow-y: auto;
+  position: relative;
 }
 
 .home-center {
   width: 100%;
-  max-width: 920px;
   margin-top: 8vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 0 24px;
   box-sizing: border-box;
+  flex: 1;
+  min-height: 0;
+}
+
+/* When chat is shown, remove max-width and use full width */
+.home-center:has(.chat-area) {
+  max-width: none;
+  align-items: stretch;
+  padding: 0;
 }
 
 .slogan {
@@ -152,12 +158,56 @@ const onAskQuick = (q: string) => {
   background: transparent;
   border: none;
   box-shadow: none;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
-.home-footer { height: 48px; display: flex; align-items: center; gap: 8px; color: var(--color-text-tertiary); font-size: 12px; }
+/* Fixed Question Title */
+.fixed-question-title {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: var(--color-bg-primary);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--color-border-light);
+  padding: 16px 24px;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.fixed-question-title h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  text-align: left;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+/* Adjust main content when fixed title is shown */
+.home-main:has(.fixed-question-title) .home-center {
+  margin-top: 80px;
+  padding-top: 20px;
+}
 
 @media (max-width: 840px) {
   .home-viewport { flex-direction: column; }
   .home-main { height: auto; }
+  
+  .fixed-question-title {
+    padding: 12px 16px;
+  }
+  
+  .fixed-question-title h1 {
+    font-size: 18px;
+  }
+  
+  .home-main:has(.fixed-question-title) .home-center {
+    margin-top: 70px;
+    padding-top: 16px;
+  }
 }
 </style>
