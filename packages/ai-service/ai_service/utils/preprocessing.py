@@ -10,7 +10,7 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 import markdown
 
-from src.models.document import DocumentMetadata
+from ai_service.models.document import DocumentMetadata
 
 
 class DocumentPreprocessor:

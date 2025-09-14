@@ -7,11 +7,11 @@ from typing import List, Dict, Any, Tuple, Optional
 import time
 from loguru import logger
 
-from src.config.settings import settings
-from src.models.chat import ChatRequest, ChatResponse, ChatMessage, SourceReference
-from src.models.document import DocumentChunk
-from src.services.vector_store import vector_store
-from src.services.llm import llm_service
+from ai_service.config.settings import settings
+from ai_service.models.chat import ChatRequest, ChatResponse, ChatMessage, SourceReference
+from ai_service.models.document import DocumentChunk
+from ai_service.services.vector_store import vector_store
+from ai_service.services.llm import llm_service
 
 
 class RAGPipeline:
@@ -258,7 +258,7 @@ Relevance: {score:.2f}
                            'announcing', '新特性', 'feature', '变更', 'change']
         
         # 对比/比较相关关键词
-        comparison_keywords = ['对比', '比较', '差异', '区别', 'vs', 'versus', '差别']
+        comparison_keywords = ['对比', '比较', '差异', '区别', 'vs', 'versus', '差别', 'difference']
         
         # 概念学习相关关键词
         concept_keywords = ['是什么', '什么是', 'what is', '如何', 'how', '为什么', 'why',
@@ -268,17 +268,17 @@ Relevance: {score:.2f}
         performance_keywords = ['性能', 'performance', '优化', 'optimization', 'seo',
                               '速度', 'speed', '快', 'fast']
         
-        # 匹配意图
+        # 匹配意图 (调整顺序，将更具体的意图放在前面)
         if any(keyword in query_lower for keyword in config_keywords):
             return 'configuration'
+        elif any(keyword in query_lower for keyword in performance_keywords):
+            return 'performance'
         elif any(keyword in query_lower for keyword in comparison_keywords):
             return 'comparison'
         elif any(keyword in query_lower for keyword in version_keywords):
             return 'version_release'
         elif any(keyword in query_lower for keyword in concept_keywords):
             return 'concept_learning'
-        elif any(keyword in query_lower for keyword in performance_keywords):
-            return 'performance'
         else:
             return 'general'
     

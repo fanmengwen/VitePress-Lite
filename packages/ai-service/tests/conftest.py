@@ -9,12 +9,12 @@ from pathlib import Path
 from typing import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock
 
-from src.config.settings import Settings
-from src.models.document import DocumentMetadata, DocumentChunk
-from src.services.embedding import EmbeddingService
-from src.services.vector_store import VectorStoreService
-from src.services.llm import LLMService
-from src.services.rag import RAGPipeline
+from ai_service.config.settings import Settings
+from ai_service.models.document import DocumentMetadata, DocumentChunk
+from ai_service.services.embedding import EmbeddingService
+from ai_service.services.vector_store import VectorStoreService
+from ai_service.services.llm import LLMService
+from ai_service.services.rag import RAGPipeline
 
 
 @pytest.fixture(scope="session")
@@ -150,7 +150,7 @@ async def mock_llm_service():
 @pytest.fixture
 async def mock_rag_pipeline():
     """Create mock RAG pipeline."""
-    from src.models.chat import ChatResponse, SourceReference
+    from ai_service.models.chat import ChatResponse, SourceReference
     
     pipeline = AsyncMock(spec=RAGPipeline)
     
@@ -242,10 +242,10 @@ def test_docs_directory(test_markdown_content):
 
 
 @pytest.fixture
-async def test_client():
+def test_client():
     """Create test client for FastAPI app."""
     from fastapi.testclient import TestClient
-    from src.main import app
+    from ai_service.main import app
     
     with TestClient(app) as client:
         yield client

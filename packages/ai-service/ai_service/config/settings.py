@@ -9,7 +9,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Main application settings with environment variable support."""
+    """Application settings."""
+
+    # Project Config
+    project_name: str = "VitePress-Lite AI Service"
+    version: str = "0.1.0"
+    description: str = "AI-powered documentation Q&A service using RAG"
+    api_prefix: str = "/api"
     
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -113,7 +119,6 @@ class Settings(BaseSettings):
     )
     
     # API Configuration
-    api_prefix: str = Field(default="/api", description="API route prefix")
     cors_origins: list[str] = Field(
         default=["http://localhost:5173", "http://localhost:3001"],
         description="Allowed CORS origins"
@@ -196,6 +201,33 @@ class Settings(BaseSettings):
             }
         else:
             raise ValueError(f"Unsupported LLM provider: {provider}")
+
+    def apply_performance_optimizations(self) -> None:
+        """Apply performance optimization settings."""
+        import os
+        
+        # Performance settings - only set if not already configured
+        perf_settings = {
+            'RETRIEVAL_TOP_K': '3',
+            'SIMILARITY_THRESHOLD': '0.3', 
+            'OPENAI_MAX_TOKENS': '500',
+            'CHUNK_SIZE': '800',
+            'CHUNK_OVERLAP': '100',
+            'OPENAI_TEMPERATURE': '0.1',
+            'CACHE_TTL': '1800',
+            'MAX_CONCURRENT_REQUESTS': '5'
+        }
+        
+        applied = []
+        for key, value in perf_settings.items():
+            if key not in os.environ:
+                os.environ[key] = value
+                applied.append(f"{key}={value}")
+        
+        if applied:
+            print("✅ 性能优化配置已应用:")
+            for setting in applied:
+                print(f"   • {setting}")
 
 
 # Global settings instance

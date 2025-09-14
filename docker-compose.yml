@@ -1,13 +1,13 @@
-# /docker-compose.dev.yml (最终修正版)
+# /docker-compose.yml (Universal version)
 version: "3.9"
 
 services:
-  # AI 服务 (保持不变)
+  # AI Service (Refactored)
   ai-service:
     image: vitepress-lite-ai-dev
     build:
       context: ./packages/ai-service
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     environment:
       - ENVIRONMENT=development
       - PYTHONUNBUFFERED=1
@@ -17,7 +17,6 @@ services:
       - ./packages/ai-service:/app
       - ./docs:/app/docs
       - ai_data:/app/data
-    command: sh -c "python start_optimized.py"
     ports:
       - "8000:8000"
     healthcheck:

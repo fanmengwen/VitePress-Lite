@@ -45,10 +45,9 @@ def main():
     # 启动服务
     try:
         print("🌟 正在启动服务...")
-        subprocess.run([
-            sys.executable, 
-            "src/main.py"
-        ], check=True)
+        # 使用统一 CLI：先进行增量索引，再启动服务
+        subprocess.run([sys.executable, "-m", "ai_service", "ingest"], check=False)
+        subprocess.run([sys.executable, "-m", "ai_service", "serve"], check=True)
     except KeyboardInterrupt:
         print("\n👋 服务已停止")
     except subprocess.CalledProcessError as e:

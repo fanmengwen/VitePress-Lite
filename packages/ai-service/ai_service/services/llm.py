@@ -10,8 +10,8 @@ import openai
 from loguru import logger
 import json
 
-from src.config.settings import settings
-from src.models.chat import ChatMessage
+from ai_service.config.settings import settings
+from ai_service.models.chat import ChatMessage
 
 
 class LLMService:

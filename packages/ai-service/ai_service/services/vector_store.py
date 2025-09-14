@@ -4,16 +4,16 @@ Provides similarity search and metadata filtering capabilities.
 """
 
 import asyncio
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, Set
 import chromadb
 from chromadb.config import Settings as ChromaSettings
 from loguru import logger
 import uuid
 from pathlib import Path
 
-from src.config.settings import settings
-from src.models.document import DocumentChunk, VectorDocument
-from src.services.embedding import embedding_service
+from ai_service.config.settings import settings
+from ai_service.models.document import DocumentChunk, VectorDocument
+from ai_service.services.embedding import embedding_service
 
 
 class VectorStoreService:
@@ -65,12 +65,13 @@ class VectorStoreService:
             count = self.collection.count()
             logger.info(f"Vector store initialized. Documents: {count}")
     
-    async def add_documents(self, chunks: List[DocumentChunk]) -> int:
+    async def add_documents(self, chunks: List[DocumentChunk], file_hash: Optional[str] = None) -> int:
         """
         Add document chunks to the vector store.
         
         Args:
             chunks: List of document chunks to add
+            file_hash: Optional hash of the source file content for deduplication
             
         Returns:
             Number of documents successfully added
@@ -112,6 +113,9 @@ class VectorStoreService:
                 "published": chunk.metadata.published,
                 "tags": ",".join(chunk.metadata.tags),
             }
+            # Attach file hash for deduplication/versioning if provided
+            if file_hash is not None:
+                metadata["file_hash"] = file_hash
             metadatas.append(metadata)
             
             # Document content
@@ -131,6 +135,63 @@ class VectorStoreService:
             
         except Exception as e:
             logger.error(f"Failed to add documents to vector store: {e}")
+            return 0
+
+    async def get_document_hash(self, document_path: str) -> Optional[str]:
+        """Get stored file hash for a given document path, if any."""
+        await self.initialize()
+        try:
+            results = self.collection.get(
+                where={"document_path": document_path},
+                include=["metadatas"],
+                limit=1,
+            )
+            metadatas = results.get("metadatas") or []
+            if not metadatas:
+                return None
+            return metadatas[0].get("file_hash")
+        except Exception as e:
+            logger.error(f"Failed to get document hash for {document_path}: {e}")
+            return None
+
+    async def list_document_paths(self) -> List[str]:
+        """List all distinct document paths currently stored in the collection."""
+        await self.initialize()
+        try:
+            results = self.collection.get(include=["metadatas"])  # get all
+            paths: Set[str] = set()
+            for md in results.get("metadatas") or []:
+                path = md.get("document_path")
+                if path:
+                    paths.add(path)
+            return sorted(paths)
+        except Exception as e:
+            logger.error(f"Failed to list document paths: {e}")
+            return []
+
+    async def upsert_documents(self, document_path: str, chunks: List[DocumentChunk], file_hash: str) -> int:
+        """
+        Upsert all chunks for a document: if content hash unchanged, skip; otherwise
+        delete existing chunks for that path, then add the new ones with file_hash.
+        
+        Returns number of chunks added (0 if skipped).
+        """
+        await self.initialize()
+        try:
+            existing_hash = await self.get_document_hash(document_path)
+            if existing_hash == file_hash:
+                logger.info(f"No changes detected for {document_path}, skipping")
+                return 0
+
+            # Delete existing chunks for this document to avoid duplicates
+            deleted_count = await self.delete_documents(document_path)
+            if deleted_count:
+                logger.info(f"Replaced {deleted_count} old chunks for {document_path}")
+
+            # Add new chunks with updated hash
+            return await self.add_documents(chunks, file_hash=file_hash)
+        except Exception as e:
+            logger.error(f"Upsert failed for {document_path}: {e}")
             return 0
     
     async def search_similar(
@@ -302,7 +363,7 @@ class VectorStoreService:
     
     def _metadata_to_chunk(self, metadata: Dict[str, Any], content: str) -> DocumentChunk:
         """Convert ChromaDB metadata back to DocumentChunk."""
-        from src.models.document import DocumentMetadata
+        from ai_service.models.document import DocumentMetadata
         
         # Reconstruct metadata
         doc_metadata = DocumentMetadata(

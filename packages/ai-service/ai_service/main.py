@@ -4,29 +4,32 @@ Provides chat endpoints with RAG capabilities.
 """
 
 import asyncio
+import uuid
 from contextlib import asynccontextmanager
 from typing import Dict, Any
 
 from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import ORJSONResponse
+from datetime import datetime
 from loguru import logger
+import time
 import uvicorn
 
-from src.config.settings import settings
-from src.models.chat import ChatRequest, ChatResponse, HealthResponse, ErrorResponse, VectorSearchRequest, VectorSearchResponse
-from src.services.rag import rag_pipeline
-from src.services.vector_store import vector_store
-from src.services.embedding import embedding_service
-from src.services.llm import llm_service
+from ai_service.config.settings import settings
+from ai_service.models.chat import ChatRequest, ChatResponse, HealthResponse, ErrorResponse, VectorSearchRequest, VectorSearchResponse
+from ai_service.services.rag import rag_pipeline
+from ai_service.services.vector_store import vector_store
+from ai_service.services.embedding import embedding_service
+from ai_service.services.llm import llm_service
 
 # 应用性能优化配置
 try:
-    import performance_config
+    settings.apply_performance_optimizations()
     logger.info("🚀 Performance optimizations applied")
-except ImportError:
-    logger.warning("Performance config not found, using default settings")
+except Exception as e:
+    logger.warning(f"Failed to apply performance optimizations: {e}")
 
 
 @asynccontextmanager
@@ -56,12 +59,11 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI application
 app = FastAPI(
-    title="VitePress-Lite AI Service",
-    description="AI-powered documentation Q&A service using RAG",
-    version="0.1.0",
-    docs_url="/docs" if settings.is_development() else None,
-    redoc_url="/redoc" if settings.is_development() else None,
-    lifespan=lifespan
+    title=settings.project_name,
+    description=settings.description,
+    version=settings.version,
+    lifespan=lifespan,
+    default_response_class=ORJSONResponse
 )
 
 # Configure CORS
@@ -83,34 +85,38 @@ if settings.is_production():
 
 # Exception handlers
 @app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+async def global_exception_handler(request: Request, exc: Exception) -> ORJSONResponse:
     """Global exception handler."""
-    logger.error(f"Unhandled exception in {request.method} {request.url}: {exc}")
+    request_id = request.state.request_id if hasattr(request.state, "request_id") else "unknown"
+    logger.error(f"Unhandled exception in {request.method} {request.url}: {exc}", request_id=request_id)
     
-    error_response = ErrorResponse(
-        error="internal_server_error",
-        message="An unexpected error occurred",
-        detail={"type": type(exc).__name__} if settings.is_development() else None
-    )
-    
-    return JSONResponse(
+    error_content = ErrorResponse(
+        error="InternalServerError",
+        message="An unexpected error occurred.",
+        request_id=request_id
+    ).model_dump()
+
+    return ORJSONResponse(
         status_code=500,
-        content=error_response.model_dump()
+        content=error_content,
     )
 
 
 @app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+async def http_exception_handler(request: Request, exc: HTTPException) -> ORJSONResponse:
     """HTTP exception handler."""
-    error_response = ErrorResponse(
-        error="http_error",
-        message=exc.detail,
-        detail={"status_code": exc.status_code}
-    )
+    request_id = request.state.request_id if hasattr(request.state, "request_id") else "unknown"
     
-    return JSONResponse(
+    error_content = ErrorResponse(
+        error=exc.__class__.__name__,
+        message=exc.detail,
+        request_id=request_id
+    ).model_dump()
+    
+    return ORJSONResponse(
         status_code=exc.status_code,
-        content=error_response.model_dump()
+        content=error_content,
+        headers=exc.headers
     )
 
 

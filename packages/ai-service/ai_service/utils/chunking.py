@@ -6,7 +6,7 @@ Respects markdown structure and maintains semantic coherence.
 import re
 from typing import List, Tuple, Optional
 from dataclasses import dataclass
-from src.models.document import DocumentChunk, DocumentMetadata
+from ai_service.models.document import DocumentChunk, DocumentMetadata
 
 
 @dataclass

@@ -6,8 +6,8 @@ import pytest
 from unittest.mock import patch, AsyncMock
 from fastapi.testclient import TestClient
 
-from src.main import app
-from src.models.chat import ChatRequest, ChatResponse
+from ai_service.main import app
+from ai_service.models.chat import ChatRequest, ChatResponse
 
 
 class TestHealthEndpoint:
@@ -15,7 +15,7 @@ class TestHealthEndpoint:
     
     def test_health_check_success(self, test_client):
         """Test successful health check."""
-        with patch('src.services.rag.rag_pipeline.get_system_info') as mock_info:
+        with patch('ai_service.services.rag.rag_pipeline.get_system_info') as mock_info:
             mock_info.return_value = {
                 "vector_store": {"total_documents": 10},
                 "llm_service": {"status": "healthy"}
@@ -33,7 +33,7 @@ class TestHealthEndpoint:
     
     def test_health_check_with_errors(self, test_client):
         """Test health check with service errors."""
-        with patch('src.services.rag.rag_pipeline.get_system_info') as mock_info:
+        with patch('ai_service.services.rag.rag_pipeline.get_system_info') as mock_info:
             mock_info.return_value = {"error": "Service unavailable"}
             
             response = test_client.get("/health")
@@ -44,7 +44,7 @@ class TestHealthEndpoint:
     
     def test_health_check_exception(self, test_client):
         """Test health check with exception."""
-        with patch('src.services.rag.rag_pipeline.get_system_info') as mock_info:
+        with patch('ai_service.services.rag.rag_pipeline.get_system_info') as mock_info:
             mock_info.side_effect = Exception("Service error")
             
             response = test_client.get("/health")
@@ -59,7 +59,7 @@ class TestChatEndpoint:
     
     def test_chat_success(self, test_client):
         """Test successful chat request."""
-        with patch('src.services.rag.rag_pipeline.process_chat_request') as mock_process:
+        with patch('ai_service.services.rag.rag_pipeline.process_chat_request') as mock_process:
             # Mock successful response
             mock_response = ChatResponse(
                 answer="Vite is a build tool that provides fast development server.",
@@ -92,8 +92,8 @@ class TestChatEndpoint:
         
         response = test_client.post("/api/chat", json=request_data)
         
-        assert response.status_code == 400
-        assert "cannot be empty" in response.json()["detail"]
+        assert response.status_code == 422  # Pydantic validation raises 422
+        assert "input" in response.text
     
     def test_chat_whitespace_question(self, test_client):
         """Test chat with whitespace-only question."""
@@ -108,7 +108,7 @@ class TestChatEndpoint:
     
     def test_chat_with_history(self, test_client):
         """Test chat with conversation history."""
-        with patch('src.services.rag.rag_pipeline.process_chat_request') as mock_process:
+        with patch('ai_service.services.rag.rag_pipeline.process_chat_request') as mock_process:
             mock_response = ChatResponse(
                 answer="Based on our previous discussion about Vite...",
                 sources=[],
@@ -142,7 +142,7 @@ class TestChatEndpoint:
     
     def test_chat_service_error(self, test_client):
         """Test chat with service error."""
-        with patch('src.services.rag.rag_pipeline.process_chat_request') as mock_process:
+        with patch('ai_service.services.rag.rag_pipeline.process_chat_request') as mock_process:
             mock_process.side_effect = Exception("RAG pipeline error")
             
             request_data = {
@@ -153,7 +153,7 @@ class TestChatEndpoint:
             response = test_client.post("/api/chat", json=request_data)
             
             assert response.status_code == 500
-            assert "Failed to process chat request" in response.json()["detail"]
+            assert "Failed to process chat request" in response.json()["message"]
     
     def test_chat_validation_error(self, test_client):
         """Test chat with validation error."""
@@ -168,7 +168,7 @@ class TestChatEndpoint:
     
     def test_chat_custom_parameters(self, test_client):
         """Test chat with custom parameters."""
-        with patch('src.services.rag.rag_pipeline.process_chat_request') as mock_process:
+        with patch('ai_service.services.rag.rag_pipeline.process_chat_request') as mock_process:
             mock_response = ChatResponse(
                 answer="Custom response",
                 sources=[],
@@ -200,7 +200,7 @@ class TestSystemInfoEndpoint:
     
     def test_system_info_success(self, test_client):
         """Test successful system info request."""
-        with patch('src.services.rag.rag_pipeline.get_system_info') as mock_info:
+        with patch('ai_service.services.rag.rag_pipeline.get_system_info') as mock_info:
             mock_info.return_value = {
                 "vector_store": {
                     "total_documents": 42,
@@ -227,7 +227,7 @@ class TestSystemInfoEndpoint:
     
     def test_system_info_error(self, test_client):
         """Test system info with error."""
-        with patch('src.services.rag.rag_pipeline.get_system_info') as mock_info:
+        with patch('ai_service.services.rag.rag_pipeline.get_system_info') as mock_info:
             mock_info.side_effect = Exception("System error")
             
             response = test_client.get("/system-info")
@@ -240,7 +240,7 @@ class TestVectorStoreEndpoints:
     
     def test_vector_store_stats(self, test_client):
         """Test vector store statistics."""
-        with patch('src.services.vector_store.vector_store.get_collection_stats') as mock_stats:
+        with patch('ai_service.services.vector_store.vector_store.get_collection_stats') as mock_stats:
             mock_stats.return_value = {
                 "total_documents": 25,
                 "unique_authors": 3,
@@ -256,7 +256,7 @@ class TestVectorStoreEndpoints:
     
     def test_clear_vector_store(self, test_client):
         """Test clearing vector store."""
-        with patch('src.services.vector_store.vector_store.clear_collection') as mock_clear:
+        with patch('ai_service.services.vector_store.vector_store.clear_collection') as mock_clear:
             mock_clear.return_value = True
             
             response = test_client.delete("/api/vector-store/clear")
@@ -267,7 +267,7 @@ class TestVectorStoreEndpoints:
     
     def test_delete_document(self, test_client):
         """Test deleting specific document."""
-        with patch('src.services.vector_store.vector_store.delete_documents') as mock_delete:
+        with patch('ai_service.services.vector_store.vector_store.delete_documents') as mock_delete:
             mock_delete.return_value = 3
             
             response = test_client.delete("/api/vector-store/documents/test-doc.md")
@@ -307,12 +307,14 @@ class TestErrorHandling:
 class TestCORSHeaders:
     """Test CORS configuration."""
     
-    def test_cors_headers_present(self, test_client):
-        """Test that CORS headers are present."""
-        response = test_client.options("/api/chat")
+    def test_cors_headers_present_on_get(self, test_client):
+        """Test that CORS headers are present on a simple GET request."""
+        headers = {"Origin": "http://localhost:5173"}
+        response = test_client.get("/health", headers=headers)
         
-        # Should allow CORS preflight
-        assert response.status_code in [200, 204]
+        assert response.status_code == 200
+        assert "access-control-allow-origin" in response.headers
+        assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
     
     def test_cors_allowed_origins(self, test_client):
         """Test CORS with allowed origin."""
@@ -333,7 +335,7 @@ class TestPerformance:
         import threading
         
         def make_request():
-            with patch('src.services.rag.rag_pipeline.process_chat_request') as mock_process:
+            with patch('ai_service.services.rag.rag_pipeline.process_chat_request') as mock_process:
                 mock_response = ChatResponse(
                     answer="Concurrent response",
                     sources=[],

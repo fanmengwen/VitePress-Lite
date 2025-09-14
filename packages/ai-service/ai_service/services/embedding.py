@@ -10,7 +10,7 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 from loguru import logger
 
-from src.config.settings import settings
+from ai_service.config.settings import settings
 
 
 class EmbeddingService:
