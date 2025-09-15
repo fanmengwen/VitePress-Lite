@@ -99,6 +99,14 @@ class Settings(BaseSettings):
         default="vite_docs", description="Vector collection name"
     )
     
+    # Conversation store configuration
+    conversation_store: Literal["sqlite"] = Field(
+        default="sqlite", description="Conversation persistence backend"
+    )
+    conversation_db_path: str = Field(
+        default="./data/conversations.sqlite3", description="Path to conversation SQLite database"
+    )
+    
     # Document Processing
     docs_path: str = Field(
         default="../../docs", description="Path to documentation files"

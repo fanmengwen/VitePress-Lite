@@ -9,6 +9,7 @@ from loguru import logger
 
 from ai_service.config.settings import settings
 from ai_service.models.chat import ChatRequest, ChatResponse, ChatMessage, SourceReference
+from ai_service.services.conversation_store import conversation_store
 from ai_service.models.document import DocumentChunk
 from ai_service.services.vector_store import vector_store
 from ai_service.services.llm import llm_service
@@ -53,7 +54,21 @@ class RAGPipeline:
             
             # Step 2: Build context and conversation history
             context = self._build_context(relevant_chunks)
-            history = self._build_history(request.history or [])
+
+            # Prefer persisted history when conversation_id is provided
+            persisted_messages: List[ChatMessage] = []
+            if request.conversation_id:
+                try:
+                    # fetch last N messages from conversation store
+                    raw_msgs = await conversation_store.get_messages(request.conversation_id, limit=10)
+                    for m in raw_msgs:
+                        persisted_messages.append(ChatMessage(role=m.role, content=m.content))
+                except Exception:
+                    # fallback silently to request.history
+                    persisted_messages = []
+
+            effective_history = persisted_messages if persisted_messages else (request.history or [])
+            history = self._build_history(effective_history)
             
             # Step 3: Create system prompt
             system_prompt = self.system_prompt_template.format(
@@ -85,13 +100,28 @@ class RAGPipeline:
             
             logger.info(f"Generated response in {response_time_ms}ms with {len(sources)} sources")
             
+            # Step 8: Persist conversation
+            conversation_id = request.conversation_id
+            try:
+                if not conversation_id:
+                    # create new conversation with inferred title (first 50 chars)
+                    title = request.question[:50] if request.question else "New conversation"
+                    conv = await conversation_store.create_conversation(title=title)
+                    conversation_id = conv.id
+                # append user question and assistant answer
+                await conversation_store.append_message(conversation_id, role="user", content=request.question)
+                await conversation_store.append_message(conversation_id, role="assistant", content=answer)
+            except Exception:
+                # Persistence errors should not break chat; continue without raising
+                pass
+
             return ChatResponse(
                 answer=answer,
                 sources=sources,
                 confidence_score=confidence_score,
                 response_time_ms=response_time_ms,
-                tokens_used=None,  # Would need to track from LLM
-                conversation_id=None  # Could implement conversation tracking
+                tokens_used=None,
+                conversation_id=conversation_id,
             )
             
         except Exception as e:

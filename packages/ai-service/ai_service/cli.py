@@ -97,12 +97,8 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     if args.command == 'ingest':
         logger.info("Starting document ingestion...")
-        ingester = DocumentIngester(
-            docs_path=args.docs_path,
-            file_paths=args.file,
-            clear=args.clear
-        )
-        asyncio.run(ingester.run_ingestion())
+        ingester = DocumentIngester(docs_path=args.docs_path)
+        asyncio.run(ingester.ingest_all_documents())
         logger.info("Document ingestion finished.")
         return 0
         

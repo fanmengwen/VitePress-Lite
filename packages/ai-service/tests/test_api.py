@@ -65,7 +65,8 @@ class TestChatEndpoint:
                 answer="Vite is a build tool that provides fast development server.",
                 sources=[],
                 confidence_score=0.85,
-                response_time_ms=500
+                response_time_ms=500,
+                conversation_id="test-conv-id"
             )
             mock_process.return_value = mock_response
             
@@ -82,6 +83,7 @@ class TestChatEndpoint:
             assert "sources" in data
             assert "confidence_score" in data
             assert "response_time_ms" in data
+            assert "conversation_id" in data
     
     def test_chat_empty_question(self, test_client):
         """Test chat with empty question."""

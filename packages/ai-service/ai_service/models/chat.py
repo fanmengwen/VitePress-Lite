@@ -24,6 +24,10 @@ class ChatRequest(BaseModel):
         max_length=1000,
         description="User's question about the documentation"
     )
+    conversation_id: Optional[str] = Field(
+        default=None,
+        description="Existing conversation identifier to continue the chat"
+    )
     history: Optional[List[ChatMessage]] = Field(
         default=None,
         description="Previous conversation history"
@@ -77,6 +81,19 @@ class ChatResponse(BaseModel):
         default=None,
         description="Conversation identifier"
     )
+
+
+# Conversation DTOs
+class ConversationInfo(BaseModel):
+    id: str
+    title: str
+    updated_at: str
+
+
+class ConversationDetail(BaseModel):
+    id: str
+    title: str
+    messages: List[ChatMessage]
 
 
 # Vector search only request/response for progressive UI

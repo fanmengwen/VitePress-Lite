@@ -13,6 +13,7 @@ ENV PYTHONUNBUFFERED=1 \
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
+    --fix-missing \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
@@ -23,7 +24,7 @@ WORKDIR /app
 
 # Copy dependency files and install dependencies
 COPY pyproject.toml poetry.lock ./
-RUN poetry install --only main --no-ansi
+RUN poetry install --only main --no-ansi --no-root
 
 # Production stage
 FROM python:3.11-slim as production
@@ -56,7 +57,9 @@ COPY entrypoint.sh ./entrypoint.sh
 
 # Create required directories and set permissions
 RUN mkdir -p ./data/chroma_db ./logs \
-    && chown -R aiservice:aiservice /app
+    && chown -R aiservice:aiservice /app \
+    && mkdir -p /home/aiservice \
+    && chown -R aiservice:aiservice /home/aiservice
 
 # Switch to non-root user
 USER aiservice

@@ -18,11 +18,12 @@ import time
 import uvicorn
 
 from ai_service.config.settings import settings
-from ai_service.models.chat import ChatRequest, ChatResponse, HealthResponse, ErrorResponse, VectorSearchRequest, VectorSearchResponse
+from ai_service.models.chat import ChatRequest, ChatResponse, HealthResponse, ErrorResponse, VectorSearchRequest, VectorSearchResponse, ConversationInfo, ConversationDetail, ChatMessage
 from ai_service.services.rag import rag_pipeline
 from ai_service.services.vector_store import vector_store
 from ai_service.services.embedding import embedding_service
 from ai_service.services.llm import llm_service
+from ai_service.services.conversation_store import conversation_store
 
 # 应用性能优化配置
 try:
@@ -43,6 +44,7 @@ async def lifespan(app: FastAPI):
         await embedding_service.initialize()
         await vector_store.initialize()
         await llm_service.initialize()
+        await conversation_store.initialize()
         
         logger.info("All services initialized successfully")
         yield
@@ -233,6 +235,49 @@ async def chat(
             status_code=500,
             detail=f"Failed to process chat request: {str(e)}"
         )
+# Conversation endpoints
+@app.get(f"{settings.api_prefix}/conversations", response_model=list[ConversationInfo])
+async def list_conversations() -> list[ConversationInfo]:
+    items = await conversation_store.list_conversations(limit=200)
+    return [ConversationInfo(id=i.id, title=i.title, updated_at=i.updated_at) for i in items]
+
+
+@app.post(f"{settings.api_prefix}/conversations", response_model=ConversationInfo)
+async def create_conversation(payload: dict | None = None) -> ConversationInfo:
+    title = None
+    if isinstance(payload, dict):
+        title = payload.get("title")
+    c = await conversation_store.create_conversation(title=title)
+    return ConversationInfo(id=c.id, title=c.title, updated_at=c.updated_at)
+
+
+@app.get(f"{settings.api_prefix}/conversations/{{conversation_id}}", response_model=ConversationDetail)
+async def get_conversation(conversation_id: str) -> ConversationDetail:
+    conv = await conversation_store.get_conversation(conversation_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    msgs = await conversation_store.get_messages(conversation_id)
+    mapped = [ChatMessage(role=m.role, content=m.content) for m in msgs]
+    return ConversationDetail(id=conv.id, title=conv.title, messages=mapped)
+
+
+@app.patch(f"{settings.api_prefix}/conversations/{{conversation_id}}")
+async def rename_conversation(conversation_id: str, payload: dict) -> dict:
+    title = payload.get("title")
+    if not title:
+        raise HTTPException(status_code=400, detail="title is required")
+    ok = await conversation_store.rename_conversation(conversation_id, title)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return {"success": True}
+
+
+@app.delete(f"{settings.api_prefix}/conversations/{{conversation_id}}", status_code=204)
+async def delete_conversation(conversation_id: str) -> None:
+    ok = await conversation_store.delete_conversation(conversation_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return None
 
 
 # Vector store management endpoints (admin only)

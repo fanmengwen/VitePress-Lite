@@ -77,6 +77,50 @@ poetry run python -m ai_service serve
 
 The API will be available at `http://localhost:8000`.
 
+### Conversations API (New)
+
+- Start or continue chat
+
+```http
+POST /api/chat
+{
+  "question": "What is Vite?",
+  "conversation_id": "optional-uuid"
+}
+```
+
+Response includes `conversation_id` to continue the session.
+
+- List conversations
+
+```http
+GET /api/conversations
+```
+
+- Create a conversation
+
+```http
+POST /api/conversations { "title": "My topic" }
+```
+
+- Get conversation detail
+
+```http
+GET /api/conversations/{id}
+```
+
+- Rename conversation
+
+```http
+PATCH /api/conversations/{id} { "title": "New title" }
+```
+
+- Delete conversation
+
+```http
+DELETE /api/conversations/{id}
+```
+
 ### Docker
 
 The simplest way to run all services, including the AI service, is through the root `docker-compose.yml` file.

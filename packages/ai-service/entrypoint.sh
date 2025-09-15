@@ -4,10 +4,8 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
-# Run poetry install to ensure dependencies are in sync,
-# especially in a dev environment with mounted volumes.
-echo "Synchronizing dependencies..."
-poetry install --no-root
+# Dependencies already installed during build stage
+echo "Dependencies are ready..."
 
 # Run the data ingestion script.
 # This ensures the vector database is up-to-date on startup.
