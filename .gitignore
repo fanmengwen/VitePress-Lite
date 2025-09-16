@@ -36,3 +36,6 @@ repomix-*
 *.njsproj
 *.sln
 *.sw?
+
+.specstory/
+.cursorindexingignore

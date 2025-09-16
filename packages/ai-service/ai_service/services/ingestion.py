@@ -1,6 +1,10 @@
 """
-Document ingestion service for processing markdown files with incremental updates.
-Moves logic out of scripts/ into a reusable service and supports deduplicated upserts.
+Document ingestion service for processing markdown files with incremental upserts.
+
+Design goals:
+- Encourage dependency injection for external services (embedding, vector store)
+- Prefer stateless orchestration; return results instead of mutating instance state
+- Keep clear responsibilities and readable control flow
 """
 
 from __future__ import annotations
@@ -9,6 +13,7 @@ import asyncio
 import time
 from pathlib import Path
 from typing import List, Optional, Tuple
+from dataclasses import dataclass
 import hashlib
 from loguru import logger
 
@@ -16,8 +21,8 @@ from ai_service.config.settings import settings
 from ai_service.models.document import ProcessedDocument, IngestionResult, DocumentChunk
 from ai_service.utils.preprocessing import default_preprocessor
 from ai_service.utils.chunking import default_chunker, ChunkingConfig
-from ai_service.services.vector_store import vector_store
-from ai_service.services.embedding import embedding_service
+from ai_service.services.vector_store import vector_store, VectorStoreService
+from ai_service.services.embedding import embedding_service, EmbeddingService
 
 
 def compute_file_hash(
@@ -38,110 +43,69 @@ def compute_file_hash(
     return hasher.hexdigest()
 
 
-class DocumentIngester:
-    """Document ingestion service for processing and storing markdown files with upsert semantics."""
+def _process_file_to_document(file_path: Path) -> ProcessedDocument:
+    """Convert a markdown file into a ProcessedDocument with chunks."""
+    logger.debug(f"Processing file: {file_path}")
 
-    def __init__(self, docs_path: Optional[str] = None):
+    content, metadata = default_preprocessor.process_file(file_path)
+
+    chunks: List[DocumentChunk] = []
+    if metadata.published:
+        chunks = default_chunker.chunk_document(
+            content=content,
+            document_path=str(file_path),
+            metadata=metadata,
+        )
+
+    logger.debug(f"Created {len(chunks)} chunks from {file_path}")
+
+    return ProcessedDocument(
+        document_path=str(file_path),
+        metadata=metadata,
+        raw_content=content,
+        chunks=chunks,
+        file_size=file_path.stat().st_size,
+        word_count=len(content.split()),
+    )
+
+
+class DocumentIngester:
+    def __init__(
+        self,
+        docs_path: Optional[str] = None,
+        *,
+        embedding: Optional[EmbeddingService] = None,
+        vector: Optional[VectorStoreService] = None,
+        chunking_config: Optional[ChunkingConfig] = None,
+    ) -> None:
         self.docs_path = Path(docs_path or settings.docs_path)
-        self.chunking_config = ChunkingConfig(
+        self.embedding = embedding or embedding_service
+        self.vector = vector or vector_store
+        self.chunking_config = chunking_config or ChunkingConfig(
             max_chunk_size=settings.chunk_size,
             chunk_overlap=settings.chunk_overlap,
         )
+        # Execution controls resolved from settings only
+        self.file_paths: Optional[List[str]] = None
+        self.include_patterns: Optional[List[str]] = None
+        self.exclude_patterns: Optional[List[str]] = None
 
-        # Statistics
-        self.stats = {
-            "files_found": 0,
-            "files_processed": 0,
-            "files_skipped": 0,
-            "chunks_created": 0,
-            "vectors_stored": 0,
-            "errors": [],
-        }
+    @dataclass
+    class IngestionPlan:
+        docs_path: Path
+        files: List[Path]
 
-    async def ingest_all_documents(
-        self,
-        clear_existing: bool = False,
-        include_patterns: Optional[List[str]] = None,
-        exclude_patterns: Optional[List[str]] = None,
-    ) -> IngestionResult:
-        """
-        Ingest all markdown documents from the docs directory with incremental upsert.
-
-        If the file content hash matches the stored hash, skip re-indexing.
-        """
-        start_time = time.time()
-
-        logger.info(f"Starting document ingestion from: {self.docs_path}")
-
-        # Initialize services
-        await self._initialize_services()
-
-        # Clear existing documents if requested
-        if clear_existing:
-            logger.info("Clearing existing documents...")
-            await vector_store.clear_collection()
-
-        # Find markdown files
-        markdown_files = self._find_markdown_files(include_patterns, exclude_patterns)
-        self.stats["files_found"] = len(markdown_files)
-
-        logger.info(f"Found {len(markdown_files)} markdown files to process")
-
-        if not markdown_files:
-            logger.warning("No markdown files found!")
-            return self._create_result(start_time)
-
-        # Process files in batches
-        batch_size = 10
-        for i in range(0, len(markdown_files), batch_size):
-            batch = markdown_files[i : i + batch_size]
-            logger.info(
-                f"Processing batch {i//batch_size + 1}/{(len(markdown_files) + batch_size - 1)//batch_size}"
-            )
-
-            await self._process_file_batch_upsert(batch)
-
-        processing_time = time.time() - start_time
-        logger.info(f"Document ingestion completed in {processing_time:.2f} seconds")
-
-        return self._create_result(start_time)
-
-    async def ingest_single_file(self, file_path: str) -> ProcessedDocument:
-        """
-        Ingest a single markdown file with upsert semantics.
-        """
-        await self._initialize_services()
-
-        file_path_obj = Path(file_path)
-        if not file_path_obj.exists():
-            raise FileNotFoundError(f"File not found: {file_path}")
-
-        if not file_path_obj.suffix.lower() == ".md":
-            raise ValueError(f"File must be a markdown file: {file_path}")
-
-        logger.info(f"Processing single file: {file_path}")
-
-        # Process the file
-        processed_doc = await self._process_single_file(file_path_obj)
-
-        # Compute file hash and upsert
-        file_hash = compute_file_hash(
-            file_path_obj, self.chunking_config, embedding_service.model_name
-        )
-        added = await vector_store.upsert_documents(
-            processed_doc.document_path, processed_doc.chunks, file_hash
-        )
-        if added:
-            self.stats["vectors_stored"] += added
-
-        return processed_doc
-
-    async def _initialize_services(self) -> None:
-        """Initialize required services."""
+    async def prepare(self) -> "DocumentIngester.IngestionPlan":
+        """Prepare ingestion by initializing dependencies and resolving markdown files."""
         logger.info("Initializing services...")
-        await embedding_service.initialize()
-        await vector_store.initialize()
+        await self.embedding.initialize()
+        await self.vector.initialize()
         logger.info("Services initialized")
+
+        files = self._find_markdown_files(self.include_patterns, self.exclude_patterns)
+
+        logger.info(f"Prepared {len(files)} markdown files for ingestion")
+        return DocumentIngester.IngestionPlan(docs_path=self.docs_path, files=files)
 
     def _find_markdown_files(
         self,
@@ -177,84 +141,104 @@ class DocumentIngester:
         unique_files.sort()
         return unique_files
 
-    async def _process_file_batch_upsert(self, files: List[Path]) -> None:
-        """Process a batch of files and perform upsert into the vector store."""
-        tasks = [self._process_single_file(file_path) for file_path in files]
+    async def run_ingestion(self) -> IngestionResult:
+        """Execute full-directory ingestion with incremental upsert semantics."""
+
+        start_time = time.time()
+        logger.info(f"Starting document ingestion from: {self.docs_path}")
+
+        plan = await self.prepare()
+
+        stats = {
+            "files_found": len(plan.files),
+            "files_processed": 0,
+            "files_skipped": 0,
+            "chunks_created": 0,
+            "vectors_stored": 0,
+            "errors": [],
+        }
+
+        if not plan.files:
+            logger.warning("No markdown files found!")
+            return self._create_result(start_time, stats)
+
+        batch_size = max(1, int(getattr(settings, "max_concurrent_requests", 10)))
+        total_batches = (len(plan.files) + batch_size - 1) // batch_size
+        for i in range(0, len(plan.files), batch_size):
+            batch = plan.files[i : i + batch_size]
+            logger.info(f"Processing batch {i//batch_size + 1}/{total_batches}")
+
+            batch_stats = await self._process_file_batch_upsert(batch)
+            stats["files_processed"] += batch_stats["files_processed"]
+            stats["files_skipped"] += batch_stats["files_skipped"]
+            stats["chunks_created"] += batch_stats["chunks_created"]
+            stats["vectors_stored"] += batch_stats["vectors_stored"]
+            stats["errors"].extend(batch_stats["errors"])
+
+        processing_time = time.time() - start_time
+        logger.info(f"Document ingestion completed in {processing_time:.2f} seconds")
+
+        return self._create_result(start_time, stats)
+
+    def _create_result(self, start_time: float, stats: dict) -> IngestionResult:
+        """Create ingestion result from local aggregation statistics."""
+        processing_time = time.time() - start_time
+        return IngestionResult(
+            documents_processed=stats["files_processed"],
+            chunks_created=stats["chunks_created"],
+            vectors_stored=stats["vectors_stored"],
+            processing_time_seconds=processing_time,
+            errors=stats["errors"],
+            skipped_files=[f"Skipped {stats['files_skipped']} files"],
+        )
+
+    async def _process_file_batch_upsert(self, files: List[Path]) -> dict:
+        """Process a batch of files and perform upsert into the vector store.
+
+        Returns an aggregation dict for this batch.
+        """
+        tasks = [
+            asyncio.to_thread(_process_file_to_document, file_path)
+            for file_path in files
+        ]
         processed_docs = await asyncio.gather(*tasks, return_exceptions=True)
+
+        stats = {
+            "files_processed": 0,
+            "files_skipped": 0,
+            "chunks_created": 0,
+            "vectors_stored": 0,
+            "errors": [],
+        }
 
         for i, result in enumerate(processed_docs):
             file_path = str(files[i])
             if isinstance(result, Exception):
                 error_msg = f"Failed to process {file_path}: {result}"
                 logger.error(error_msg)
-                self.stats["errors"].append(error_msg)
-                self.stats["files_skipped"] += 1
+                stats["errors"].append(error_msg)
+                stats["files_skipped"] += 1
                 continue
 
-            # Skip unpublished documents entirely
+            # Skip unpublished or empty
             if not result.metadata.published or not result.chunks:
                 logger.info(f"Skipping unpublished/empty document: {file_path}")
-                self.stats["files_skipped"] += 1
+                stats["files_skipped"] += 1
                 continue
 
-            # Compute file hash and upsert (delete then add if changed)
             file_hash = compute_file_hash(
-                Path(result.document_path), self.chunking_config, embedding_service.model_name
+                Path(result.document_path),
+                self.chunking_config,
+                self.embedding.model_name,
             )
-            added = await vector_store.upsert_documents(
+            added = await self.vector.upsert_documents(
                 result.document_path, result.chunks, file_hash
             )
             if added == 0:
-                # Unchanged
-                self.stats["files_skipped"] += 1
+                stats["files_skipped"] += 1
             else:
-                self.stats["files_processed"] += 1
-                self.stats["chunks_created"] += len(result.chunks)
-                self.stats["vectors_stored"] += added
+                stats["files_processed"] += 1
+                stats["chunks_created"] += len(result.chunks)
+                stats["vectors_stored"] += added
 
-    async def _process_single_file(self, file_path: Path) -> ProcessedDocument:
-        """Process a single markdown file into chunks."""
-        try:
-            logger.debug(f"Processing file: {file_path}")
-
-            # Read and preprocess file
-            content, metadata = default_preprocessor.process_file(file_path)
-
-            # Create chunks (even if unpublished to return stats, but will skip upsert)
-            chunks: List[DocumentChunk] = []
-            if metadata.published:
-                chunks = default_chunker.chunk_document(
-                    content=content,
-                    document_path=str(file_path),
-                    metadata=metadata,
-                )
-
-            logger.debug(f"Created {len(chunks)} chunks from {file_path}")
-
-            return ProcessedDocument(
-                document_path=str(file_path),
-                metadata=metadata,
-                raw_content=content,
-                chunks=chunks,
-                file_size=file_path.stat().st_size,
-                word_count=len(content.split()),
-            )
-
-        except Exception as e:
-            logger.error(f"Error processing {file_path}: {e}")
-            raise
-
-    def _create_result(self, start_time: float) -> IngestionResult:
-        """Create ingestion result from statistics."""
-        processing_time = time.time() - start_time
-
-        return IngestionResult(
-            documents_processed=self.stats["files_processed"],
-            chunks_created=self.stats["chunks_created"],
-            vectors_stored=self.stats["vectors_stored"],
-            processing_time_seconds=processing_time,
-            errors=self.stats["errors"],
-            skipped_files=[f"Skipped {self.stats['files_skipped']} files"],
-        )
-
-
+        return stats

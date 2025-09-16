@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock
 
-from ai_service.config.settings import Settings
+from ai_service.config.settings import SettingsModule
 from ai_service.models.document import DocumentMetadata, DocumentChunk
 from ai_service.services.embedding import EmbeddingService
 from ai_service.services.vector_store import VectorStoreService
@@ -29,15 +29,19 @@ def event_loop():
 def test_settings():
     """Create test settings with temporary paths."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        yield Settings(
-            environment="testing",
-            chromadb_path=f"{temp_dir}/chroma_test",
-            docs_path=f"{temp_dir}/docs",
-            llm_provider="openai",
-            openai_api_key="test-key",
-            embedding_model="all-MiniLM-L6-v2",
-            log_level="DEBUG"
-        )
+        # Create a test settings object with overridden values
+        test_config = SettingsModule()
+        
+        # Override specific values for testing
+        test_config.chromadb_path = f"{temp_dir}/chroma_test"
+        test_config.docs_path = f"{temp_dir}/docs"
+        test_config.api_key = "test-key"
+        test_config.model = "gpt-3.5-turbo"
+        test_config.embedding_model = "all-MiniLM-L6-v2"
+        test_config.log_level = "DEBUG"
+        test_config.conversation_db_path = f"{temp_dir}/conversations.sqlite3"
+        
+        yield test_config
 
 
 @pytest.fixture
@@ -245,6 +249,10 @@ def test_docs_directory(test_markdown_content):
 def test_client():
     """Create test client for FastAPI app."""
     from fastapi.testclient import TestClient
+    # Ensure API endpoints that require API key are accessible in unit tests
+    # by clearing API key in the existing settings object
+    import ai_service.config.settings as settings_module
+    settings_module.settings.api_key = ""
     from ai_service.main import app
     
     with TestClient(app) as client:

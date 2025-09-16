@@ -1,242 +1,140 @@
 """
 Configuration management for AI service.
-Supports multiple LLM providers and vector storage options.
+All configuration values are read directly from .env file.
 """
 
-from typing import Literal, Optional
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
+import json
+from typing import Optional, List
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
 
-class Settings(BaseSettings):
-    """Application settings."""
+def get_bool(key: str, default: bool = False) -> bool:
+    """Convert environment variable to boolean."""
+    value = os.getenv(key, "").lower()
+    if value in ("true", "1", "yes", "on"):
+        return True
+    elif value in ("false", "0", "no", "off"):
+        return False
+    return default
 
-    # Project Config
-    project_name: str = "VitePress-Lite AI Service"
-    version: str = "0.1.0"
-    description: str = "AI-powered documentation Q&A service using RAG"
-    api_prefix: str = "/api"
+def get_int(key: str, default: int = 0) -> int:
+    """Convert environment variable to integer."""
+    try:
+        return int(os.getenv(key, str(default)))
+    except ValueError:
+        return default
+
+def get_float(key: str, default: float = 0.0) -> float:
+    """Convert environment variable to float."""
+    try:
+        return float(os.getenv(key, str(default)))
+    except ValueError:
+        return default
+
+def get_list(key: str, default: List[str] = None) -> List[str]:
+    """Convert environment variable to list (JSON format)."""
+    if default is None:
+        default = []
     
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=False,
-        extra="ignore"
-    )
+    value = os.getenv(key)
+    if not value:
+        return default
     
-    # Server Configuration
-    host: str = Field(default="127.0.0.1", description="Server host")
-    port: int = Field(default=8000, description="Server port")
-    workers: int = Field(default=1, description="Number of workers")
-    reload: bool = Field(default=True, description="Auto-reload on changes")
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError:
+        # Fallback to comma-separated values
+        return [item.strip() for item in value.split(",") if item.strip()]
+
+def get_str(key: str, default: str = "") -> str:
+    """Get string environment variable with default."""
+    return os.getenv(key, default)
+
+class SettingsModule:
+    """Configuration module that provides settings as attributes."""
     
-    # Environment
-    environment: Literal["development", "testing", "production"] = Field(
-        default="development", description="Application environment"
-    )
-    
-    # LLM Configuration
-    llm_provider: Literal["auto", "openai", "aliyun", "deepseek", "local", "ollama"] = Field(
-        default="auto", description="LLM provider to use (auto selects by available API keys)"
-    )
-    
-    # OpenAI Configuration
-    openai_api_key: Optional[str] = Field(
-        default=None, description="OpenAI API key"
-    )
-    openai_model: str = Field(
-        default="gpt-3.5-turbo", description="OpenAI model name"
-    )
-    openai_temperature: float = Field(
-        default=0.1, description="LLM temperature for consistency"
-    )
-    openai_max_tokens: int = Field(
-        default=1000, description="Maximum tokens in response"
-    )
-    
-    # 阿里云通义千问配置
-    aliyun_api_key: Optional[str] = Field(
-        default=None, description="阿里云通义千问 API Key"
-    )
-    aliyun_model: str = Field(
-        default="qwen-turbo", description="阿里云模型名称"
-    )
-    aliyun_base_url: str = Field(
-        default="https://dashscope.aliyuncs.com/compatible-mode/v1", 
-        description="阿里云 API Base URL"
-    )
-    
-    # DeepSeek 配置
-    deepseek_api_key: Optional[str] = Field(
-        default=None, description="DeepSeek API Key"
-    )
-    deepseek_model: str = Field(
-        default="deepseek-chat", description="DeepSeek 模型名称"
-    )
-    deepseek_base_url: str = Field(
-        default="https://api.deepseek.com/v1", 
-        description="DeepSeek API Base URL"
-    )
-    
-    
-    # Embedding Configuration
-    embedding_model: str = Field(
-        default="all-MiniLM-L6-v2", 
-        description="Sentence transformer model for embeddings"
-    )
-    embedding_dimension: int = Field(
-        default=384, description="Embedding vector dimension"
-    )
-    
-    # Vector Database Configuration
-    vector_db_type: Literal["chromadb", "faiss"] = Field(
-        default="chromadb", description="Vector database type"
-    )
-    chromadb_path: str = Field(
-        default="./data/chroma_db", description="ChromaDB storage path"
-    )
-    collection_name: str = Field(
-        default="vite_docs", description="Vector collection name"
-    )
-    
-    # Conversation store configuration
-    conversation_store: Literal["sqlite"] = Field(
-        default="sqlite", description="Conversation persistence backend"
-    )
-    conversation_db_path: str = Field(
-        default="./data/conversations.sqlite3", description="Path to conversation SQLite database"
-    )
-    
-    # Document Processing
-    docs_path: str = Field(
-        default="../../docs", description="Path to documentation files"
-    )
-    chunk_size: int = Field(
-        default=1000, description="Document chunk size in characters"
-    )
-    chunk_overlap: int = Field(
-        default=200, description="Overlap between chunks"
-    )
-    
-    # RAG Configuration
-    retrieval_top_k: int = Field(
-        default=5, description="Number of relevant chunks to retrieve"
-    )
-    similarity_threshold: float = Field(
-        default=0.7, description="Minimum similarity score for retrieval"
-    )
-    
-    # API Configuration
-    cors_origins: list[str] = Field(
-        default=["http://localhost:5173", "http://localhost:3001"],
-        description="Allowed CORS origins"
-    )
-    
-    # Security
-    api_key_header: str = Field(
-        default="X-API-Key", description="API key header name"
-    )
-    api_key: Optional[str] = Field(
-        default=None, description="Optional API key for authentication"
-    )
-    
-    # Logging
-    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(
-        default="INFO", description="Logging level"
-    )
-    log_format: str = Field(
-        default="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
-        description="Log format string"
-    )
-    
-    # Performance
-    cache_ttl: int = Field(
-        default=3600, description="Cache TTL in seconds"
-    )
-    max_concurrent_requests: int = Field(
-        default=10, description="Maximum concurrent requests"
-    )
-    
-    def is_production(self) -> bool:
-        """Check if running in production environment."""
-        return self.environment == "production"
-    
-    def is_development(self) -> bool:
-        """Check if running in development environment."""
-        return self.environment == "development"
+    def __init__(self):
+        # Project Config
+        self.project_name = get_str("PROJECT_NAME", "VitePress-Lite AI Service")
+        self.version = get_str("VERSION", "0.1.0")
+        self.description = get_str("DESCRIPTION", "AI-powered documentation Q&A service using RAG")
+        self.api_prefix = get_str("API_PREFIX", "/api")
+        
+        # Server Configuration
+        self.host = get_str("HOST", "127.0.0.1")
+        self.port = get_int("PORT", 8000)
+        self.workers = get_int("WORKERS", 1)
+        self.reload = get_bool("RELOAD", True)
+        self.access_log = get_bool("ACCESS_LOG", True)
+        
+        # Middleware and Logging Control
+        self.enable_trusted_host_middleware = get_bool("ENABLE_TRUSTED_HOST_MIDDLEWARE", False)
+        self.enable_file_logging = get_bool("ENABLE_FILE_LOGGING", False)
+        
+        # LLM Configuration (Generic)
+        self.api_key = get_str("API_KEY")
+        self.model = get_str("MODEL", "gpt-3.5-turbo")
+        self.base_url = get_str("BASE_URL")  # Optional, defaults to OpenAI if not set
+        self.temperature = get_float("TEMPERATURE", 0.1)
+        self.max_tokens = get_int("MAX_TOKENS", 1000)
+        
+        # Embedding Configuration
+        self.embedding_model = get_str("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+        self.embedding_dimension = get_int("EMBEDDING_DIMENSION", 384)
+        
+        # Vector Database Configuration
+        self.vector_db_type = get_str("VECTOR_DB_TYPE", "chromadb")
+        self.chromadb_path = get_str("CHROMADB_PATH", "./data/chroma_db")
+        self.collection_name = get_str("COLLECTION_NAME", "vite_docs")
+        
+        # Conversation store configuration
+        self.conversation_store = get_str("CONVERSATION_STORE", "sqlite")
+        self.conversation_db_path = get_str("CONVERSATION_DB_PATH", "./data/conversations.sqlite3")
+        
+        # Document Processing
+        self.docs_path = get_str("DOCS_PATH", "../../docs")
+        self.chunk_size = get_int("CHUNK_SIZE", 1000)
+        self.chunk_overlap = get_int("CHUNK_OVERLAP", 200)
+        
+        # RAG Configuration
+        self.retrieval_top_k = get_int("RETRIEVAL_TOP_K", 5)
+        self.similarity_threshold = get_float("SIMILARITY_THRESHOLD", 0.7)
+        
+        # API Configuration
+        self.cors_origins = get_list("CORS_ORIGINS", ["http://localhost:5173", "http://localhost:3001"])
+        
+        # Security
+        self.api_key_header = get_str("API_KEY_HEADER", "X-API-Key")
+        
+        # Logging
+        self.log_file = get_str("LOG_FILE", "logs/ai-service.log")
+        self.log_level = get_str("LOG_LEVEL", "INFO")
+        self.log_rotation = get_str("LOG_ROTATION", "10 MB")
+        self.log_retention = get_str("LOG_RETENTION", "10 days")
+        self.log_format = get_str(
+            "LOG_FORMAT",
+            "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
+        )
+        
+        # Performance
+        self.cache_ttl = get_int("CACHE_TTL", 3600)
+        self.max_concurrent_requests = get_int("MAX_CONCURRENT_REQUESTS", 10)
     
     def get_llm_config(self) -> dict:
-        """Get LLM configuration based on provider."""
-        provider = self.llm_provider
-
-        # Auto-select provider by available API keys
-        if provider == "auto":
-            if self.aliyun_api_key:
-                provider = "aliyun"
-            elif self.deepseek_api_key:
-                provider = "deepseek"
-            elif self.openai_api_key:
-                provider = "openai"
-            else:
-                raise ValueError("No LLM API key configured. Set ALIYUN_API_KEY / OPENAI_API_KEY / DEEPSEEK_API_KEY in .env")
-
-        if provider == "openai":
-            return {
-                "provider": "openai",
-                "api_key": self.openai_api_key,
-                "model": self.openai_model,
-                "temperature": self.openai_temperature,
-                "max_tokens": self.openai_max_tokens,
-                "base_url": None,  # 使用默认 OpenAI URL
-            }
-        elif provider == "aliyun":
-            return {
-                "provider": "aliyun",
-                "api_key": self.aliyun_api_key,
-                "model": self.aliyun_model,
-                "temperature": self.openai_temperature,
-                "max_tokens": self.openai_max_tokens,
-                "base_url": self.aliyun_base_url,
-            }
-        elif provider == "deepseek":
-            return {
-                "provider": "deepseek",
-                "api_key": self.deepseek_api_key,
-                "model": self.deepseek_model,
-                "temperature": self.openai_temperature,
-                "max_tokens": self.openai_max_tokens,
-                "base_url": self.deepseek_base_url,
-            }
-        else:
-            raise ValueError(f"Unsupported LLM provider: {provider}")
-
-    def apply_performance_optimizations(self) -> None:
-        """Apply performance optimization settings."""
-        import os
+        if not self.api_key:
+            raise ValueError("API_KEY is required in .env file")
         
-        # Performance settings - only set if not already configured
-        perf_settings = {
-            'RETRIEVAL_TOP_K': '3',
-            'SIMILARITY_THRESHOLD': '0.3', 
-            'OPENAI_MAX_TOKENS': '500',
-            'CHUNK_SIZE': '800',
-            'CHUNK_OVERLAP': '100',
-            'OPENAI_TEMPERATURE': '0.1',
-            'CACHE_TTL': '1800',
-            'MAX_CONCURRENT_REQUESTS': '5'
+        return {
+            "api_key": self.api_key,
+            "model": self.model,
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+            "base_url": self.base_url or None,  # Use OpenAI default if not specified
         }
-        
-        applied = []
-        for key, value in perf_settings.items():
-            if key not in os.environ:
-                os.environ[key] = value
-                applied.append(f"{key}={value}")
-        
-        if applied:
-            print("✅ 性能优化配置已应用:")
-            for setting in applied:
-                print(f"   • {setting}")
 
 
 # Global settings instance
-settings = Settings() 
+settings = SettingsModule()

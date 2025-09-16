@@ -23,23 +23,18 @@ def test_cli_serve_command(mock_serve_main):
 @patch('ai_service.cli.DocumentIngester')
 @patch('asyncio.run')
 def test_cli_ingest_command(mock_asyncio_run, MockDocumentIngester):
-    """Test that `ingest` command calls the ingester with correct arguments."""
-    
-    # Mock the async method `run_ingestion`
+    """Test that `ingest` command constructs ingester (no args) and runs ingestion."""
+
     mock_ingester_instance = MockDocumentIngester.return_value
-    
-    # Simulate command-line arguments: `ai-service ingest --docs-path ./data --clear --verbose`
-    test_args = ['ingest', '--docs-path', './data', '--clear', '--verbose']
-    
+
+    # Minimal interface: `ai-service ingest`
+    test_args = ['ingest']
+
     cli.main(test_args)
 
-    # Verify DocumentIngester was initialized correctly
-    MockDocumentIngester.assert_called_once_with(
-        docs_path='./data',
-        file_paths=None,
-        clear=True
-    )
-    
+    # Verify DocumentIngester was initialized without arguments
+    MockDocumentIngester.assert_called_once_with()
+
     # Verify that asyncio.run was used to execute the run_ingestion method
     mock_asyncio_run.assert_called_once_with(mock_ingester_instance.run_ingestion())
 

@@ -1,12 +1,3 @@
-"""
-Lightweight SQLite-backed conversation store.
-
-This module provides minimal CRUD operations for conversations and messages,
-optimized for simplicity and clarity. It intentionally avoids external ORM
-dependencies to keep the service portable. All operations are wrapped with
-async helpers to integrate smoothly with the rest of the async codebase.
-"""
-
 from __future__ import annotations
 
 import sqlite3
@@ -53,43 +44,6 @@ class ConversationStore:
         conn.execute("PRAGMA foreign_keys = ON;")
         return conn
 
-    async def initialize(self) -> None:
-        """Create tables and indices if missing."""
-        def _init():
-            with self._connect() as conn:
-                cur = conn.cursor()
-                cur.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS conversations (
-                        id TEXT PRIMARY KEY,
-                        title TEXT NOT NULL,
-                        created_at TEXT NOT NULL,
-                        updated_at TEXT NOT NULL,
-                        metadata TEXT
-                    );
-                    """
-                )
-                cur.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS messages (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        conversation_id TEXT NOT NULL,
-                        role TEXT NOT NULL,
-                        content TEXT NOT NULL,
-                        created_at TEXT NOT NULL,
-                        FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
-                    );
-                    """
-                )
-                cur.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS idx_messages_conv_created
-                    ON messages(conversation_id, created_at);
-                    """
-                )
-                conn.commit()
-        await asyncio.to_thread(_init)
-
     # --- conversation operations ---
     async def create_conversation(self, title: Optional[str] = None) -> Conversation:
         """Create a new conversation."""
@@ -104,7 +58,9 @@ class ConversationStore:
                     (new_id, safe_title, now, now),
                 )
                 conn.commit()
-            return Conversation(id=new_id, title=safe_title, created_at=now, updated_at=now)
+            return Conversation(
+                id=new_id, title=safe_title, created_at=now, updated_at=now
+            )
 
         return await asyncio.to_thread(_create)
 
@@ -117,6 +73,7 @@ class ConversationStore:
                 )
                 conn.commit()
                 return cur.rowcount > 0
+
         return await asyncio.to_thread(_rename)
 
     async def delete_conversation(self, conversation_id: str) -> bool:
@@ -128,6 +85,7 @@ class ConversationStore:
                 )
                 conn.commit()
                 return cur.rowcount > 0
+
         return await asyncio.to_thread(_delete)
 
     async def get_conversation(self, conversation_id: str) -> Optional[Conversation]:
@@ -145,26 +103,34 @@ class ConversationStore:
                     created_at=row["created_at"],
                     updated_at=row["updated_at"],
                 )
+
         return await asyncio.to_thread(_get)
 
-    async def list_conversations(self, limit: int = 100) -> List[Conversation]:
+    async def list_conversations(self, limit: int = 100, offset: int = 0) -> List[Conversation]:
         def _list() -> List[Conversation]:
             with self._connect() as conn:
                 rows = conn.execute(
-                    "SELECT id, title, created_at, updated_at FROM conversations ORDER BY datetime(updated_at) DESC LIMIT ?",
-                    (limit,),
+                    "SELECT id, title, created_at, updated_at FROM conversations ORDER BY datetime(updated_at) DESC LIMIT ? OFFSET ?",
+                    (limit, offset),
                 ).fetchall()
                 return [
                     Conversation(
-                        id=r["id"], title=r["title"], created_at=r["created_at"], updated_at=r["updated_at"]
+                        id=r["id"],
+                        title=r["title"],
+                        created_at=r["created_at"],
+                        updated_at=r["updated_at"],
                     )
                     for r in rows
                 ]
+
         return await asyncio.to_thread(_list)
 
     # --- message operations ---
-    async def append_message(self, conversation_id: str, role: str, content: str) -> int:
+    async def append_message(
+        self, conversation_id: str, role: str, content: str
+    ) -> int:
         now = _utcnow_iso()
+
         def _append() -> int:
             with self._connect() as conn:
                 cur = conn.execute(
@@ -177,9 +143,12 @@ class ConversationStore:
                 )
                 conn.commit()
                 return int(cur.lastrowid)
+
         return await asyncio.to_thread(_append)
 
-    async def get_messages(self, conversation_id: str, limit: Optional[int] = None) -> List[Message]:
+    async def get_messages(
+        self, conversation_id: str, limit: Optional[int] = None
+    ) -> List[Message]:
         def _get() -> List[Message]:
             with self._connect() as conn:
                 sql = (
@@ -200,6 +169,7 @@ class ConversationStore:
                 if limit is not None and limit > 0:
                     return msgs[-limit:]
                 return msgs
+
         return await asyncio.to_thread(_get)
 
 
@@ -207,5 +177,3 @@ class ConversationStore:
 from ai_service.config.settings import settings  # noqa: E402
 
 conversation_store = ConversationStore(settings.conversation_db_path)
-
-
