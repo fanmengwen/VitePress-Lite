@@ -8,7 +8,7 @@
       </div>
       
       <div class="home-center">
-        <h1 v-show="!showChat" class="slogan"><span class="em">用提问</span>发现世界</h1>
+        <h1 v-show="!showChat" class="slogan">用<span class="em">提问</span>查询知识</h1>
 
         <div v-show="!showChat" class="ask-card">
           <div class="ask-input-wrap">
@@ -16,24 +16,24 @@
               v-model="askText"
               type="text"
               class="ask-input"
-              placeholder="输入你的问题，或使用 @ 快捷引用文档"
+              placeholder="输入你的问题"
               @keyup.enter="onAsk"
             />
-            <button class="ask-send" @click="onAsk">提问</button>
+            <button class="ask-send" @click="onAsk" :disabled="!askText.trim()">提问</button>
           </div>
           <div class="ask-row">
-            <div class="ask-left">
+            <!-- <div class="ask-left">
               <span class="provider">深度思考 R1</span>
               <span class="dot"></span>
               <span>知</span>
               <span class="dot"></span>
               <span>图</span>
-            </div>
-            <div class="ask-right">
+            </div> -->
+            <!-- <div class="ask-right">
               <span class="icon">@</span>
               <span class="icon">📎</span>
               <span class="icon">⬆️</span>
-            </div>
+            </div> -->
           </div>
         </div>
 
@@ -64,9 +64,10 @@ const askText = ref('');
 const showChat = ref(false);
 const chatRef = ref<InstanceType<typeof ChatbotWindow> | null>(null);
 const quickQuestions = [
-  '现代医学有哪些自相矛盾的地方？',
-  '噪音真要被认同吗？',
-  '如何看待读书无用论？'
+  '如何配置Vite的代理？',
+  'Vite的HMR是如何工作的？',
+  '如何优化Vite构建性能？',
+  'Vite的插件有哪些？',
 ];
 
 const onAsk = () => {
@@ -102,8 +103,9 @@ const onAskQuick = (q: string) => {
 }
 
 .home-center {
-  width: 100%;
-  margin-top: 8vh;
+  width: 1012px;
+  justify-content: center;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -116,6 +118,7 @@ const onAskQuick = (q: string) => {
 /* When chat is shown, remove max-width and use full width */
 .home-center:has(.chat-area) {
   max-width: none;
+  /* width: 100%; */
   align-items: stretch;
   padding: 0;
 }
@@ -142,19 +145,20 @@ const onAskQuick = (q: string) => {
   flex: 1; height: 56px; border-radius: 12px; border: 1px solid var(--color-border-light);
   padding: 0 16px; font-size: 16px;
 }
-.ask-send { height: 56px; padding: 0 24px; border-radius: 12px; border: none; background: var(--color-primary); color: #fff; cursor: pointer; }
+.ask-send { height: 56px; padding: 0 24px; border-radius: 12px; border: none; background: var(--color-primary); color: #fff; cursor: pointer;&:disabled { background: var(--color-border-dark); cursor: not-allowed; } }
 .ask-row { margin-top: 8px; display: flex; align-items: center; justify-content: space-between; color: var(--color-text-tertiary); font-size: 12px; }
 .ask-left { display: flex; align-items: center; gap: 6px; }
 .ask-right { display: flex; align-items: center; gap: 8px; }
 .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--color-border-default); display: inline-block; }
 
-.suggestions { margin-top: 12px; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; padding: 8px 12px; background: linear-gradient(180deg, rgba(0,0,0,0.03), rgba(0,0,0,0)); border-radius: 12px; }
-.chip { border: 1px solid rgba(0,0,0,0.06); background: #fff; color: var(--color-text-secondary); border-radius: 999px; padding: 8px 14px; font-size: 13px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.suggestions { margin-top: 12px; display: flex; gap: 10px; flex-wrap: nowrap; justify-content: center; padding: 8px 12px; background: linear-gradient(180deg, rgba(0,0,0,0.03), rgba(0,0,0,0)); border-radius: 12px; }
+.chip { white-space: nowrap;border: 1px solid rgba(0,0,0,0.06); background: #fff; color: var(--color-text-secondary); border-radius: 999px; padding: 16px 14px; font-size: 13px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
 .chip:hover { background: var(--color-primary-50); color: var(--color-primary); border-color: var(--color-primary-100); }
 
 .chat-area { 
   margin-top: 16px; 
   width: 100%; 
+  padding: 28px;
   background: transparent;
   border: none;
   box-shadow: none;
@@ -210,4 +214,5 @@ const onAskQuick = (q: string) => {
     padding-top: 16px;
   }
 }
+
 </style>

@@ -44,93 +44,101 @@
 
         <!-- Messages Container -->
       <div class="messages-container" ref="messagesContainer">
-        <!-- Step badges / progress -->
-        <div v-if="progress.stage" class="progress-bar">
-          <div class="progress-dot" :class="{ done: progress.stage !== 'retrieve' }">1</div>
-          <span :class="{ active: progress.stage === 'retrieve' }">检索</span>
-          <div class="progress-line" :class="{ done: progress.stage !== 'retrieve' }"></div>
-          <div class="progress-dot" :class="{ done: progress.stage === 'done' }">2</div>
-          <span :class="{ active: progress.stage === 'generate' }">生成</span>
+        <!-- Sticky question header (inline mode) -->
+        <div 
+          v-if="inline && (currentQuestion || lastQuestion)"
+          class="sticky-question-header"
+        >
         </div>
-        <!-- Welcome Message -->
-        <div v-if="messages.length === 0" class="welcome-message">
-          <div class="ai-message">
-            <div class="message-avatar">🤖</div>
-            <div class="message-content">
-              <p>👋 你好！我是 AI 文档助手，可以帮你回答关于 Vite 的问题。</p>
-              <div class="suggested-questions">
-                <h4>试试这些问题：</h4>
-                <button 
-                  v-for="question in suggestedQuestions" 
-                  :key="question"
-                  @click="askSuggestedQuestion(question)"
-                  class="suggested-question-btn"
-                >
-                  {{ question }}
-                </button>
+        <div class="messages-inner">
+          <!-- Step badges / progress -->
+          <div v-if="progress.stage" class="progress-bar">
+            <div class="progress-dot" :class="{ done: progress.stage !== 'retrieve' }">1</div>
+            <span :class="{ active: progress.stage === 'retrieve' }">检索</span>
+            <div class="progress-line" :class="{ done: progress.stage !== 'retrieve' }"></div>
+            <div class="progress-dot" :class="{ done: progress.stage === 'done' }">2</div>
+            <span :class="{ active: progress.stage === 'generate' }">生成</span>
+          </div>
+          <!-- Welcome Message -->
+          <div v-if="messages.length === 0" class="welcome-message">
+            <div class="ai-message">
+              <div class="message-avatar">🤖</div>
+              <div class="message-content">
+                <p>👋 你好！我是 AI 文档助手，可以帮你回答关于 Vite 的问题。</p>
+                <div class="suggested-questions">
+                  <h4>试试这些问题：</h4>
+                  <button 
+                    v-for="question in suggestedQuestions" 
+                    :key="question"
+                    @click="askSuggestedQuestion(question)"
+                    class="suggested-question-btn"
+                  >
+                    {{ question }}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Chat Messages -->
-        <div 
-          v-for="(message, index) in messages" 
-          :key="index"
-          class="message"
-          :class="{ 
-            'user-message': message.role === 'user', 
-            'ai-message': message.role === 'assistant' 
-          }"
-        >
-          <div class="message-avatar">
-            {{ message.role === 'user' ? '👤' : '🤖' }}
-          </div>
-          <div class="message-content">
-            <div class="message-text" v-html="formatMessage(message.content)"></div>
-            <div class="message-time">{{ formatTime(message.timestamp) }}</div>
-            
-            <!-- Sources for AI messages - Perplexity Style -->
-            <div v-if="message.sources && message.sources.length > 0" class="message-sources perplexity-sources">
-              <h5 class="sources-header">📚 参考资料：</h5>
-              <div class="sources-grid">
-                <div 
-                  v-for="(source, index) in message.sources" 
-                  :key="source.file_path + source.chunk_index"
-                  class="source-card"
-                  @click="navigateToSource(source)"
-                  :title="`点击跳转到：${source.title}`"
-                >
-                  <div class="source-number">{{ index + 1 }}</div>
-                  <div class="source-content">
-                    <div class="source-title">{{ source.title }}</div>
-                    <div class="source-score">相似度: {{ Math.round(source.similarity_score * 100) }}%</div>
+          <!-- Chat Messages -->
+          <div 
+            v-for="(message, index) in messages" 
+            :key="index"
+            class="message"
+            :class="{ 
+              'user-message': message.role === 'user', 
+              'ai-message': message.role === 'assistant' 
+            }"
+          >
+            <div class="message-avatar">
+              {{ message.role === 'user' ? '👤' : '🤖' }}
+            </div>
+            <div class="message-content">
+              <div class="message-text" v-html="formatMessage(message.content)"></div>
+              <div class="message-time">{{ formatTime(message.timestamp) }}</div>
+              
+              <!-- Sources for AI messages - Perplexity Style -->
+              <div v-if="message.sources && message.sources.length > 0" class="message-sources perplexity-sources">
+                <h5 class="sources-header">📚 参考资料：</h5>
+                <div class="sources-grid">
+                  <div 
+                    v-for="(source, index) in message.sources" 
+                    :key="source.file_path + source.chunk_index"
+                    class="source-card"
+                    @click="navigateToSource(source)"
+                    :title="`点击跳转到：${source.title}`"
+                  >
+                    <div class="source-number">{{ index + 1 }}</div>
+                    <div class="source-content">
+                      <div class="source-title">{{ source.title }}</div>
+                      <div class="source-score">相似度: {{ Math.round(source.similarity_score * 100) }}%</div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Loading Message -->
-        <div v-if="isLoading" class="message ai-message loading-message">
-          <div class="message-avatar">🤖</div>
-          <div class="message-content">
-            <div class="typing-indicator">
-              <span></span>
-              <span></span>
-              <span></span>
+          <!-- Loading Message -->
+          <div v-if="isLoading" class="message ai-message loading-message">
+            <div class="message-avatar">🤖</div>
+            <div class="message-content">
+              <div class="typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <div class="loading-text">AI 正在思考中...</div>
             </div>
-            <div class="loading-text">AI 正在思考中...</div>
           </div>
-        </div>
 
-        <!-- Error Message -->
-        <div v-if="errorMessage && lastQuestion" class="message error-message">
-          <div class="message-avatar">⚠️</div>
-          <div class="message-content">
-            <div class="error-text">{{ errorMessage }}</div>
-            <button @click="retryLastQuestion" class="retry-btn" >重试</button>
+          <!-- Error Message -->
+          <div v-if="errorMessage && lastQuestion" class="message error-message">
+            <div class="message-avatar">⚠️</div>
+            <div class="message-content">
+              <div class="error-text">{{ errorMessage }}</div>
+              <button @click="retryLastQuestion" class="retry-btn" >重试</button>
+            </div>
           </div>
         </div>
       </div>
@@ -524,6 +532,7 @@ defineExpose({ ask, open, close, currentQuestion });
   right: auto;
   left: auto;
   z-index: auto;
+  font-family: var(--font-family-sans);
 }
 
 /* Compact State */
@@ -687,11 +696,22 @@ defineExpose({ ask, open, close, currentQuestion });
 .chatbot-window.inline-mode .messages-container {
   padding: 0 24px;
   background: transparent;
-  gap: 24px;
   width: 100%;
-  max-width: none;
+  max-width: 100%;
   margin: 0;
   box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+}
+
+.chatbot-window.inline-mode .messages-inner {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: calc(100% - 40px);
 }
 
 .progress-bar { display: flex; align-items: center; gap: 8px; justify-content: center; margin-bottom: 4px; color: #8a8a8a; font-size: 12px; }
@@ -740,28 +760,32 @@ defineExpose({ ask, open, close, currentQuestion });
 }
 
 /* Inline mode message styling */
-.chatbot-window.inline-mode .user-message .message-text {
-  background: transparent;
-  border: 2px solid var(--color-primary);
-  color: var(--color-primary);
-  font-size: 20px;
-  font-weight: 600;
-  text-align: left;
-  padding: 20px 24px;
-  margin: 32px 0 24px 0;
+.chatbot-window.inline-mode .message { margin: 6px 0; }
+.chatbot-window.inline-mode .message-content { max-width: 100%; }
+
+.chatbot-window.inline-mode .ai-message .message-text {
+  background: #ffffff;
+  border: 1px solid var(--color-border-default);
+  color: var(--color-text-primary);
+  font-size: 15px;
+  line-height: 1.75;
+  padding: 12px 14px;
   border-radius: 12px;
-  position: relative;
+  box-shadow: var(--shadow-sm);
 }
 
-.chatbot-window.inline-mode .user-message .message-text::before {
-  content: "";
-  position: absolute;
-  top: -8px;
-  left: 24px;
-  width: 32px;
-  height: 4px;
+.chatbot-window.inline-mode .user-message { justify-content: flex-end; }
+.chatbot-window.inline-mode .user-message .message-text {
   background: var(--color-primary);
-  border-radius: 2px;
+  color: #fff;
+  border: none;
+  font-size: 15px;
+  line-height: 1.7;
+  padding: 10px 14px;
+  border-radius: 14px;
+  width: fit-content;
+  max-width: 80%;
+  margin: 4px 0;
 }
 
 .chatbot-window.inline-mode .ai-message .message-text {
@@ -771,13 +795,9 @@ defineExpose({ ask, open, close, currentQuestion });
   line-height: 1.6;
 }
 
-.chatbot-window.inline-mode .message-avatar {
-  display: none;
-}
+.chatbot-window.inline-mode .message-avatar { display: none; }
 
-.chatbot-window.inline-mode .message-content {
-  max-width: 100%;
-}
+.chatbot-window.inline-mode .ai-message .message-content {align-self: flex-start; }
 
 /* Hide welcome message in inline mode */
 .chatbot-window.inline-mode .welcome-message {
@@ -858,6 +878,7 @@ defineExpose({ ask, open, close, currentQuestion });
   line-height: 1.3;
   margin-bottom: 2px;
   display: -webkit-box;
+  line-clamp: 1;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
@@ -1094,12 +1115,12 @@ defineExpose({ ask, open, close, currentQuestion });
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 16px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
-  margin-top: 32px;
+  margin-top: 16px;
   padding: 8px 12px;
   position: sticky;
   bottom: 20px;
   z-index: 50;
-  max-width: 860px;
+  max-width: 100%;
   margin-left: auto;
   margin-right: auto;
   width: 100%;
@@ -1145,13 +1166,13 @@ defineExpose({ ask, open, close, currentQuestion });
   border: none;
   background: transparent;
   padding: 8px 12px;
-  font-size: 14px;
-  line-height: 1.3;
-  min-height: 16px;
-  max-height: 80px;
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 20px;
+  max-height: 120px;
   resize: none;
   outline: none;
-  color: #1a202c;
+  color: var(--color-text-primary);
   font-weight: 400;
 }
 
@@ -1197,10 +1218,7 @@ defineExpose({ ask, open, close, currentQuestion });
     background: var(--color-bg-primary, #1a1a1a);
     border-bottom-color: rgba(255, 255, 255, 0.06);
   }
-  
-  .question-title {
-    color: #f7fafc;
-  }
+
   
   .sources-header {
     color: #e2e8f0 !important;
@@ -1240,9 +1258,6 @@ defineExpose({ ask, open, close, currentQuestion });
 
 /* Mobile responsive styling */
 @media (max-width: 768px) {
-  .question-title {
-    font-size: 24px;
-  }
   
   .sticky-question-header {
     padding: 16px 0;
