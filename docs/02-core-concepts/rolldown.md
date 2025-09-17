@@ -1,7 +1,7 @@
 ---
 title: 【Vite Rolldown 集成指南】
-date: 2025-09-10
-author: meng
+date: "2025-09-10"
+author: "mengwen"
 published: true
 tags: ["Vite", "Rolldown"]
 excerpt: "Rolldown 集成指南"

@@ -1,7 +1,7 @@
 ---
 title: 【Vite 资产处理指南】
-date: 2025-09-10
-author: meng
+date: "2025-09-10"
+author: "mengwen"
 published: true
 tags: ["Vite", "Assets"]
 excerpt: "资产处理指南"

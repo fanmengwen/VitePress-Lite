@@ -56,6 +56,6 @@
   },
   "packageManager": "pnpm@8.15.0",
   "dependencies": {
-    "pnpm": "^10.16.0"
+    "pnpm": "^10.16.1"
   }
 }

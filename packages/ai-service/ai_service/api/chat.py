@@ -53,7 +53,6 @@ async def chat(
             detail=f"Failed to process chat request: {str(e)}"
         )
 
-
 @router.post("/vector-search", response_model=VectorSearchResponse)
 async def vector_search(request: VectorSearchRequest) -> VectorSearchResponse:
     """Progressive UI: vector search first."""
@@ -61,9 +60,8 @@ async def vector_search(request: VectorSearchRequest) -> VectorSearchResponse:
     try:
         # reuse rag internal retrieval
         results = await rag_pipeline._retrieve_documents(
-            request.query, 
-            top_k=request.top_k, 
-            similarity_threshold=request.similarity_threshold or settings.similarity_threshold
+            request.query,
+            top_k=request.top_k,
         )
         sources = rag_pipeline._create_source_references(results)
         took_ms = int((time.time() - start) * 1000)

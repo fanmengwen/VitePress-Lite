@@ -7,6 +7,8 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 from pathlib import Path
 
+from ai_service.config.settings import settings
+
 
 class DocumentMetadata(BaseModel):
     """Metadata extracted from document frontmatter."""
@@ -44,7 +46,29 @@ class DocumentChunk(BaseModel):
     @property
     def relative_path(self) -> str:
         """Get relative path for UI display."""
-        return self.document_path.replace('../../docs/', '')
+        docs_root = Path(settings.docs_path)
+        try:
+            docs_root_resolved = docs_root.resolve()
+        except Exception:
+            docs_root_resolved = docs_root
+
+        doc_path = Path(self.document_path)
+        try:
+            doc_path_resolved = doc_path.resolve()
+        except Exception:
+            doc_path_resolved = doc_path
+
+        try:
+            relative = doc_path_resolved.relative_to(docs_root_resolved)
+            return relative.as_posix()
+        except Exception:
+            doc_str = str(self.document_path).replace("\\", "/")
+            root_str = str(docs_root_resolved).rstrip("/").replace("\\", "/")
+            if doc_str.startswith(root_str):
+                trimmed = doc_str[len(root_str):].lstrip("/")
+                if trimmed:
+                    return trimmed
+            return doc_path.name
 
 class ProcessedDocument(BaseModel):
     """A fully processed document with chunks."""

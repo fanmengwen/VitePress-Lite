@@ -56,7 +56,10 @@ class RAGPipeline:
         try:
             # Step 1: Retrieve releant documents
             logger.info(f"Processing question: {request.question[:100]}...")
-            relevant_chunks = await self._retrieve_documents(request.question)
+            relevant_chunks = await self._retrieve_documents(
+                request.question,
+                top_k=settings.retrieval_top_k,
+            )
 
             if not relevant_chunks:
                 return self._create_no_context_response(request, start_time)
@@ -180,7 +183,9 @@ class RAGPipeline:
             return self._create_error_response(request, str(e), start_time)
 
     async def _retrieve_documents(
-        self, query: str
+        self, query: str,
+        *,
+        top_k: int = 3,
     ) -> List[Tuple[DocumentChunk, float]]:
         """Retrieve relevant document chunks for a query with intent-aware filtering.
 
@@ -196,6 +201,7 @@ class RAGPipeline:
             List of tuples where each item contains a `DocumentChunk` and its similarity score.
         """
         similarity_threshold = settings.similarity_threshold
+        max_results = max(1, min(top_k, 3))
 
         try:
             # Analyze query intent to tailor post-filtering strategy
@@ -213,8 +219,8 @@ class RAGPipeline:
             # Apply post-filtering and score boosting based on query intent
             filtered_results = self._post_filter_results(results, query_intent)
 
-            # only return top 3 results
-            final_results = filtered_results[:3]
+            # only return up to max_results
+            final_results = filtered_results[:max_results]
 
             logger.info(
                 f"Query intent: {query_intent}, Retrieved {len(final_results)}/{len(results)} relevant chunks"

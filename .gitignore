@@ -39,3 +39,5 @@ repomix-*
 
 .specstory/
 .cursorindexingignore
+packages/ai-service/.python-version
+.python-version
