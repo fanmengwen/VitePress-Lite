@@ -19,7 +19,13 @@
               placeholder="输入你的问题"
               @keyup.enter="onAsk"
             />
-            <button class="ask-send" @click="onAsk" :disabled="!askText.trim()">提问</button>
+            <button
+              class="ask-send"
+              @click="onAsk"
+              :disabled="!askText.trim() || isPreparingConversation"
+            >
+              {{ isPreparingConversation ? '准备中...' : '提问' }}
+            </button>
           </div>
           <div class="ask-row">
             <!-- <div class="ask-left">
@@ -35,19 +41,21 @@
               <span class="icon">⬆️</span>
             </div> -->
           </div>
+          <p v-if="askError" class="ask-error">{{ askError }}</p>
         </div>
 
         <div v-show="!showChat" class="suggestions">
           <button class="chip" v-for="q in quickQuestions" :key="q" @click="onAskQuick(q)">{{ q }}</button>
         </div>
 
-        <div class="chat-area" v-show="showChat">
+        <div class="chat-area" v-if="showChat">
           <ChatbotWindow
             ref="chatRef"
             :inline="true"
             :hideCompact="true"
             :inlineHeight="600"
             :autoExpand="true"
+            :conversation-id="activeConversationId || null"
           />
         </div>
       </div>
@@ -56,12 +64,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import ChatbotWindow from "../components/ChatbotWindow.vue";
-import SideNav from "../components/common/SideNav.vue";
+import { computed, nextTick, onMounted, ref } from 'vue';
+import ChatbotWindow from '../components/ChatbotWindow.vue';
+import SideNav from '../components/common/SideNav.vue';
+import { useConversations } from '@/composables/useConversations';
 
 const askText = ref('');
-const showChat = ref(false);
 const chatRef = ref<InstanceType<typeof ChatbotWindow> | null>(null);
 const quickQuestions = [
   '如何配置Vite的代理？',
@@ -70,17 +78,48 @@ const quickQuestions = [
   'Vite的插件有哪些？',
 ];
 
-const onAsk = () => {
-  const q = askText.value.trim();
-  if (!q) return;
-  showChat.value = true;
-  chatRef.value?.ask(q);
-  askText.value = '';
+const { activeConversationId, create, setActive, ensureLoaded } = useConversations();
+
+const isPreparingConversation = ref(false);
+const askError = ref('');
+
+onMounted(() => {
+  ensureLoaded();
+});
+
+const showChat = computed(() => Boolean(activeConversationId.value));
+
+const ensureActiveConversation = async () => {
+  if (activeConversationId.value) {
+    return activeConversationId.value;
+  }
+  isPreparingConversation.value = true;
+  try {
+    const convo = await create();
+    setActive(convo.id);
+    return convo.id;
+  } finally {
+    isPreparingConversation.value = false;
+  }
 };
 
-const onAskQuick = (q: string) => {
+const onAsk = async () => {
+  const q = askText.value.trim();
+  if (!q || isPreparingConversation.value) return;
+  askError.value = '';
+  try {
+    await ensureActiveConversation();
+    await nextTick();
+    await chatRef.value?.ask(q);
+    askText.value = '';
+  } catch (error) {
+    askError.value = error instanceof Error ? error.message : '发送失败，请重试';
+  }
+};
+
+const onAskQuick = async (q: string) => {
   askText.value = q;
-  onAsk();
+  await onAsk();
 };
 </script>
 
@@ -150,6 +189,7 @@ const onAskQuick = (q: string) => {
 .ask-left { display: flex; align-items: center; gap: 6px; }
 .ask-right { display: flex; align-items: center; gap: 8px; }
 .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--color-border-default); display: inline-block; }
+.ask-error { margin-top: 8px; color: #d04747; font-size: 12px; }
 
 .suggestions { margin-top: 12px; display: flex; gap: 10px; flex-wrap: nowrap; justify-content: center; padding: 8px 12px; background: linear-gradient(180deg, rgba(0,0,0,0.03), rgba(0,0,0,0)); border-radius: 12px; }
 .chip { white-space: nowrap;border: 1px solid rgba(0,0,0,0.06); background: #fff; color: var(--color-text-secondary); border-radius: 999px; padding: 16px 14px; font-size: 13px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }

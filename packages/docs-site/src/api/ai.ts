@@ -22,6 +22,7 @@ export interface SourceReference {
 
 export interface ChatRequest {
   question: string;
+  conversation_id?: string;
   history?: ChatMessage[];
   max_tokens?: number;
   temperature?: number;
@@ -81,6 +82,23 @@ export interface VectorSearchResponse {
   took_ms: number;
 }
 
+export interface ConversationInfo {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConversationDetail {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+}
+
+export interface RenameConversationResponse {
+  title: string;
+}
+
 // AI API Client
 class AIApiClient {
   private baseURL: string;
@@ -98,6 +116,7 @@ class AIApiClient {
         `${this.baseURL}/chat`,
         {
           question: request.question,
+          conversation_id: request.conversation_id,
           history: request.history || [],
           max_tokens: request.max_tokens,
           temperature: request.temperature,
@@ -210,6 +229,50 @@ class AIApiClient {
       }
       throw error;
     }
+  }
+
+  /**
+   * Conversations API
+   */
+  async listConversations(params?: { limit?: number; offset?: number }): Promise<ConversationInfo[]> {
+    const response = await axios.get<ConversationInfo[]>(`${this.baseURL}/conversations`, {
+      params,
+      timeout: 10000,
+    });
+    return response.data;
+  }
+
+  async createConversation(payload?: { title?: string }): Promise<ConversationInfo> {
+    const response = await axios.post<ConversationInfo>(
+      `${this.baseURL}/conversations`,
+      payload ?? {},
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 10000,
+      }
+    );
+    return response.data;
+  }
+
+  async getConversation(conversationId: string): Promise<ConversationDetail> {
+    const response = await axios.get<ConversationDetail>(
+      `${this.baseURL}/conversations/${conversationId}`,
+      { timeout: 10000 }
+    );
+    return response.data;
+  }
+
+  async renameConversation(conversationId: string, title: string): Promise<RenameConversationResponse> {
+    const response = await axios.patch<RenameConversationResponse>(
+      `${this.baseURL}/conversations/${conversationId}`,
+      { title },
+      { headers: { 'Content-Type': 'application/json' }, timeout: 10000 }
+    );
+    return response.data;
+  }
+
+  async deleteConversation(conversationId: string): Promise<void> {
+    await axios.delete(`${this.baseURL}/conversations/${conversationId}`, { timeout: 10000 });
   }
 }
 

@@ -59,8 +59,18 @@
             <div class="progress-dot" :class="{ done: progress.stage === 'done' }">2</div>
             <span :class="{ active: progress.stage === 'generate' }">生成</span>
           </div>
+          <div v-if="historyLoading" class="conversation-status loading">
+            <div class="loading-spinner"></div>
+            <span>正在加载对话记录...</span>
+          </div>
+
+          <div v-else-if="historyError" class="conversation-status error">
+            <span>{{ historyError }}</span>
+            <button class="retry-btn" @click="reloadCurrentConversation">重试</button>
+          </div>
+
           <!-- Welcome Message -->
-          <div v-if="messages.length === 0" class="welcome-message">
+          <div v-else-if="messages.length === 0" class="welcome-message">
             <div class="ai-message">
               <div class="message-avatar">🤖</div>
               <div class="message-content">
@@ -175,7 +185,8 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { aiApiClient, type ChatMessage, type ChatResponse, type SourceReference, getAIErrorMessage } from '@/api/ai';
+import { aiApiClient, type ChatMessage, type ChatResponse, type SourceReference, type ConversationDetail, getAIErrorMessage } from '@/api/ai';
+import { useConversations } from '@/composables/useConversations';
 
 // Props
 interface Props {
@@ -185,19 +196,34 @@ interface Props {
   inline?: boolean; // inline mode renders as block instead of fixed bubble
   inlineHeight?: number; // height for inline chat area
   hideCompact?: boolean; // hide compact bubble trigger
+  conversationId?: string | null;
+  autoCreateConversation?: boolean;
+  autoRename?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   autoExpand: false,
   maxMessages: 100,
-  persistHistory: true,
+  persistHistory: false,
   inline: false,
   inlineHeight: 460,
   hideCompact: false,
+  conversationId: null,
+  autoCreateConversation: true,
+  autoRename: true,
 });
 
 // Router instance
 const router = useRouter();
+const {
+  activeConversationId,
+  activeConversation,
+  setActive,
+  create,
+  loadDetail,
+  markActivity,
+  markRenamed,
+} = useConversations();
 
 // Reactive state
 const isExpanded = ref(props.autoExpand);
@@ -210,6 +236,10 @@ const showSources = ref(true);
 const lastQuestion = ref('');
 const currentQuestion = ref('');
 const progress = ref<{ stage: 'retrieve' | 'generate' | 'done' | '' }>({ stage: '' });
+const currentConversationId = ref<string | null>(props.conversationId ?? null);
+const historyLoading = ref(false);
+const historyError = ref('');
+const hasRenamedCurrentConversation = ref(false);
 
 // Refs for DOM elements
 const messagesContainer = ref<HTMLElement | null>(null);
@@ -279,6 +309,131 @@ const navigateToSource = (source: SourceReference) => {
   }
 };
 
+const defaultTitleMarkers = ['new conversation', '新的对话', '新建对话', '未命名对话'];
+
+const isDefaultConversationTitle = (title?: string | null) => {
+  if (!title) return true;
+  const normalized = title.trim().toLowerCase();
+  return defaultTitleMarkers.some((marker) => normalized.startsWith(marker));
+};
+
+const buildTitleFromQuestion = (question: string) => {
+  const trimmed = question.trim();
+  if (!trimmed) return '新建对话';
+  return trimmed.length > 24 ? `${trimmed.slice(0, 24)}...` : trimmed;
+};
+
+const resetConversationState = () => {
+  messages.value = [];
+  historyError.value = '';
+  progress.value.stage = '';
+  hasRenamedCurrentConversation.value = false;
+  currentQuestion.value = '';
+  lastQuestion.value = '';
+};
+
+const hydrateConversation = (detail: ConversationDetail) => {
+  const hydrated = detail.messages.map((msg) => ({
+    role: msg.role as 'user' | 'assistant',
+    content: msg.content,
+    timestamp: typeof msg.timestamp === 'string' ? msg.timestamp : new Date(msg.timestamp).toISOString(),
+  }));
+  messages.value = hydrated;
+
+  const lastUser = [...hydrated].reverse().find((msg) => msg.role === 'user');
+  if (lastUser) {
+    currentQuestion.value = lastUser.content;
+    lastQuestion.value = lastUser.content;
+  }
+
+  hasRenamedCurrentConversation.value = !isDefaultConversationTitle(detail.title);
+};
+
+const loadConversation = async (conversationId: string) => {
+  resetConversationState();
+  historyLoading.value = true;
+  historyError.value = '';
+  try {
+    const detail = await loadDetail(conversationId);
+    hydrateConversation(detail);
+    currentConversationId.value = detail.id;
+    setActive(detail.id);
+    await scrollToBottom();
+  } catch (error) {
+    console.error('Failed to load conversation history:', error);
+    historyError.value = getAIErrorMessage(error);
+  } finally {
+    historyLoading.value = false;
+  }
+};
+
+const ensureConversation = async (): Promise<string> => {
+  if (currentConversationId.value) {
+    return currentConversationId.value;
+  }
+  if (props.conversationId) {
+    currentConversationId.value = props.conversationId;
+    setActive(props.conversationId);
+    return props.conversationId;
+  }
+  if (!props.autoCreateConversation) {
+    throw new Error('No active conversation. 创建对话后再发送消息。');
+  }
+  const convo = await create();
+  currentConversationId.value = convo.id;
+  setActive(convo.id);
+  resetConversationState();
+  return convo.id;
+};
+
+const maybeRenameConversation = async (conversationId: string, question: string) => {
+  if (!props.autoRename || hasRenamedCurrentConversation.value) return;
+  const candidate = buildTitleFromQuestion(question);
+  if (!candidate) return;
+  const convo = activeConversation.value;
+  if (convo && convo.id === conversationId && !isDefaultConversationTitle(convo.title)) {
+    hasRenamedCurrentConversation.value = true;
+    return;
+  }
+  try {
+    await aiApiClient.renameConversation(conversationId, candidate);
+    markRenamed(conversationId, candidate);
+    hasRenamedCurrentConversation.value = true;
+  } catch (error) {
+    console.warn('Failed to rename conversation:', error);
+  }
+};
+
+const reloadCurrentConversation = async () => {
+  if (!currentConversationId.value) return;
+  await loadConversation(currentConversationId.value);
+};
+
+watch(
+  () => props.conversationId,
+  (newId) => {
+    if (!newId) {
+      currentConversationId.value = null;
+      resetConversationState();
+      return;
+    }
+    if (newId === currentConversationId.value && !historyError.value) {
+      return;
+    }
+    loadConversation(newId);
+  },
+  { immediate: true },
+);
+
+watch(
+  activeConversationId,
+  (newId) => {
+    if (!props.conversationId && newId) {
+      currentConversationId.value = newId;
+    }
+  },
+);
+
 const sendMessage = async () => {
   const question = currentInput.value.trim();
   if (!question || isLoading.value) return;
@@ -290,6 +445,17 @@ const sendMessage = async () => {
   hasError.value = false;
   errorMessage.value = '';
 
+  let conversationId: string;
+  try {
+    conversationId = await ensureConversation();
+  } catch (error) {
+    isLoading.value = false;
+    hasError.value = true;
+    errorMessage.value = getAIErrorMessage(error);
+    return;
+  }
+  currentConversationId.value = conversationId;
+
   // Add user message
   const userMessage: ChatMessage = {
     role: 'user',
@@ -297,6 +463,10 @@ const sendMessage = async () => {
     timestamp: new Date().toISOString(),
   };
   messages.value.push(userMessage);
+  if (messages.value.length > props.maxMessages) {
+    messages.value.splice(0, messages.value.length - props.maxMessages);
+  }
+  markActivity(conversationId, userMessage.timestamp);
   
   await scrollToBottom();
 
@@ -322,7 +492,7 @@ const sendMessage = async () => {
     if (retrievedSources.length > 0 && showSources.value) {
       messages.value.push({
         role: 'assistant',
-        content: '已根据知识库检索到相关文档，正在整理回答…',
+        content: '已根据知识库检索到相关文档，正在整理回答...',
         timestamp: new Date().toISOString(),
         sources: retrievedSources,
       } as any);
@@ -336,6 +506,7 @@ const sendMessage = async () => {
       history,
       include_sources: showSources.value,
       temperature: 0.1,
+      conversation_id: conversationId,
     });
 
     // Merge sources (vector-search + final)
@@ -359,7 +530,18 @@ const sendMessage = async () => {
       sources: mergedSources,
     };
     messages.value.push(aiMessage);
+    if (messages.value.length > props.maxMessages) {
+      messages.value.splice(0, messages.value.length - props.maxMessages);
+    }
+    const resolvedConversationId = response.conversation_id || conversationId;
+    if (resolvedConversationId !== conversationId) {
+      currentConversationId.value = resolvedConversationId;
+      setActive(resolvedConversationId);
+    }
+    markActivity(resolvedConversationId, aiMessage.timestamp);
     progress.value.stage = 'done';
+
+    await maybeRenameConversation(resolvedConversationId, question);
 
   } catch (error) {
     hasError.value = true;
@@ -457,7 +639,7 @@ const formatTime = (timestamp: string) => {
 
 // Persistence
 const saveHistory = () => {
-  if (props.persistHistory) {
+  if (props.persistHistory && !currentConversationId.value) {
     try {
       localStorage.setItem('chatbot-history', JSON.stringify(messages.value));
     } catch (error) {
@@ -467,7 +649,7 @@ const saveHistory = () => {
 };
 
 const loadHistory = () => {
-  if (props.persistHistory) {
+  if (props.persistHistory && !currentConversationId.value) {
     try {
       const saved = localStorage.getItem('chatbot-history');
       if (saved) {
@@ -720,6 +902,33 @@ defineExpose({ ask, open, close, currentQuestion });
 .progress-line { height: 2px; width: 60px; background: #d9d9d9; }
 .progress-line.done { background: #667eea; }
 .progress-bar .active { color: #333; }
+
+.conversation-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 12px 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.conversation-status.error {
+  color: #d04747;
+}
+
+.conversation-status .loading-spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: var(--color-primary);
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 
 .message {
   display: flex;

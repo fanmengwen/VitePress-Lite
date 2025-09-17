@@ -50,6 +50,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      "/api/conversations": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        secure: false,
+      },
       "/api/vector-store": {
         target: "http://localhost:8000",
         changeOrigin: true,
