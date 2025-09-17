@@ -18,7 +18,6 @@ router = APIRouter()
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
-    api_key_check: None = Depends(verify_api_key)
 ) -> ChatResponse:
     """
     Process a chat request using RAG pipeline.

@@ -127,7 +127,8 @@ poetry run ai-service serve --port 8001
 # 注意: 这会运行 test_api_integration.py 等文件
 poetry run pytest tests/test_api_integration.py
 ```
-*注意：完整的测试指南请参阅 `TESTING.md` 文件。*
+
+_注意：完整的测试指南请参阅 `TESTING.md` 文件。_
 
 ## 命令行接口 (CLI)
 
@@ -138,6 +139,7 @@ poetry run pytest tests/test_api_integration.py
 - `ai-service serve`: 启动 API 服务。支持 `--host`, `--port`, `--workers` 等参数。
 
 使用 `--help` 查看更多详情：
+
 ```bash
 poetry run ai-service --help
 poetry run ai-service ingest --help
@@ -155,6 +157,7 @@ docker-compose up --build
 容器的入口脚本 (`entrypoint.sh`) 会自动处理依赖安装、数据库迁移和初次数据索引。
 
 如需在容器运行时手动同步文档更新，可执行：
+
 ```bash
 docker-compose exec ai-service ai-service ingest
 ```

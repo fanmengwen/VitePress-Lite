@@ -12,10 +12,10 @@
       </div>
 
       <nav class="nav-links">
-        <router-link to="/" class="nav-link" :class="{ active: route.path === '/' }">
+        <button class="nav-link" :class="{ active: isCreating }" :disabled="isCreating" @click="handleNewConversation">
           <span class="icon">💬</span>
-          <span>对话空间</span>
-        </router-link>
+          <span>{{ isCreating ? '创建中...' : '新建对话' }}</span>
+        </button>
         <router-link to="/kb" class="nav-link" :class="{ active: route.path.startsWith('/kb') }">
           <span class="icon">📚</span>
           <span>知识库</span>
@@ -26,13 +26,6 @@
         </a>
       </nav>
 
-      <section class="new-convo">
-        <button class="new-convo-btn" :disabled="isCreating" @click="handleNewConversation">
-          <span class="new-symbol">＋</span>
-          <span>{{ isCreating ? '创建中...' : '新建对话' }}</span>
-        </button>
-        <p v-if="actionError" class="action-error">{{ actionError }}</p>
-      </section>
 
       <section class="history-section">
         <header class="section-header">
@@ -57,14 +50,14 @@
           <li
             v-for="item in conversations"
             :key="item.id"
-            :class="['history-item', { active: item.id === activeConversationId }]"
+            :class="['history-item', { active: route.path === '/' && item.id === activeConversationId }]"
           >
-            <button class="history-button" @click="handleSelectConversation(item.id)">
+            <div class="history-button" @click="handleSelectConversation(item.id)">
               <div class="history-title" :title="item.title">
                 {{ formatConversationTitle(item.title) }}
               </div>
               <div class="history-meta">{{ formatUpdatedAt(item.updated_at) }}</div>
-            </button>
+            </div>
             <button
               class="delete-button"
               title="删除对话"
@@ -87,13 +80,13 @@
           <span class="section-title">知识库精选</span>
         </header>
         <p class="knowledge-desc">精选文档与笔记，辅助 AI 给出高质量回答。</p>
-        <div class="knowledge-links">
+        <!-- <div class="knowledge-links">
           <button class="knowledge-button" @click="handleOpenKnowledgeBase">
             浏览全部知识库
           </button>
           <router-link class="knowledge-quick" to="/kb#articles">最新文章</router-link>
           <router-link class="knowledge-quick" to="/kb#overview">文档总览</router-link>
-        </div>
+        </div> -->
       </section>
     </div>
 
@@ -106,6 +99,14 @@
         </div>
       </div>
     </footer>
+    <ConfirmModal
+      v-model="showDeleteModal"
+      title="删除对话"
+      message="此操作无法撤销，确定要删除该对话吗？"
+      confirm-text="删除"
+      cancel-text="取消"
+      @confirm="confirmDelete"
+    />
   </aside>
 </template>
 
@@ -113,6 +114,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useConversations } from '@/composables/useConversations';
+import ConfirmModal from './ConfirmModal.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -129,8 +131,11 @@ const {
   remove,
   hasConversations,
 } = useConversations();
+  console.log("🚀 ~ activeConversationId:", activeConversationId)
 
 const actionError = ref<string | null>(null);
+const showDeleteModal = ref(false);
+const pendingDeleteId = ref<string | null>(null);
 const isCreating = ref(false);
 
 onMounted(() => {
@@ -197,13 +202,22 @@ const handleRefresh = async () => {
   }
 };
 
-const handleDeleteConversation = async (conversationId: string) => {
-  if (!window.confirm('确定要删除这条对话记录吗？')) return;
+const handleDeleteConversation = (conversationId: string) => {
+  actionError.value = null;
+  pendingDeleteId.value = conversationId;
+  showDeleteModal.value = true;
+};
+
+const confirmDelete = async () => {
+  if (!pendingDeleteId.value) return;
   actionError.value = null;
   try {
-    await remove(conversationId);
+    await remove(pendingDeleteId.value);
   } catch (err) {
     actionError.value = err instanceof Error ? err.message : '删除失败，请重试。';
+  } finally {
+    showDeleteModal.value = false;
+    pendingDeleteId.value = null;
   }
 };
 
@@ -247,6 +261,7 @@ const githubUrl =
   gap: 12px;
   text-decoration: none;
   color: inherit;
+  outline: none !important;
 }
 
 .brand-icon {
@@ -276,7 +291,7 @@ const githubUrl =
   margin-bottom: 24px;
 }
 
-.nav-link {
+  .nav-link {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -285,6 +300,11 @@ const githubUrl =
   text-decoration: none;
   color: var(--color-text-secondary);
   transition: background 0.2s ease;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
 }
 
 .nav-link:hover {
@@ -368,6 +388,9 @@ const githubUrl =
   background: transparent;
   cursor: pointer;
   color: var(--color-text-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .icon-button:disabled {
@@ -423,8 +446,9 @@ const githubUrl =
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
-  padding: 6px 8px;
-  background: transparent;
+  padding: 0 8px;
+  background: transparent !important;
+  box-shadow: none !important;
   border: none;
   text-align: left;
   cursor: pointer;
@@ -443,18 +467,16 @@ const githubUrl =
 }
 
 .delete-button {
-  width: 28px;
   height: 28px;
   background: transparent;
   border: none;
   border-radius: 8px;
   color: var(--color-text-tertiary);
   cursor: pointer;
+  display: flex;
+  align-items: center;
 }
 
-.delete-button:hover {
-  background: rgba(0, 0, 0, 0.05);
-}
 
 .history-empty {
   padding: 16px;

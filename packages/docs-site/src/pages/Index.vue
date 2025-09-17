@@ -28,18 +28,6 @@
             </button>
           </div>
           <div class="ask-row">
-            <!-- <div class="ask-left">
-              <span class="provider">深度思考 R1</span>
-              <span class="dot"></span>
-              <span>知</span>
-              <span class="dot"></span>
-              <span>图</span>
-            </div> -->
-            <!-- <div class="ask-right">
-              <span class="icon">@</span>
-              <span class="icon">📎</span>
-              <span class="icon">⬆️</span>
-            </div> -->
           </div>
           <p v-if="askError" class="ask-error">{{ askError }}</p>
         </div>
@@ -209,7 +197,7 @@ const onAskQuick = async (q: string) => {
 
 /* Fixed Question Title */
 .fixed-question-title {
-  position: absolute;
+  position: sticky;
   top: 0;
   left: 0;
   right: 0;
@@ -219,6 +207,9 @@ const onAskQuick = async (q: string) => {
   padding: 16px 24px;
   z-index: 100;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  align-self: stretch;
+  box-sizing: border-box;
 }
 
 .fixed-question-title h1 {
@@ -229,30 +220,27 @@ const onAskQuick = async (q: string) => {
   text-align: left;
   line-height: 1.3;
   letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Adjust main content when fixed title is shown */
 .home-main:has(.fixed-question-title) .home-center {
-  margin-top: 80px;
-  padding-top: 20px;
+  margin-top: 0;
 }
 
 @media (max-width: 840px) {
   .home-viewport { flex-direction: column; }
   .home-main { height: auto; }
   
-  .fixed-question-title {
-    padding: 12px 16px;
-  }
+  .fixed-question-title { padding: 12px 16px; }
   
   .fixed-question-title h1 {
     font-size: 18px;
   }
   
-  .home-main:has(.fixed-question-title) .home-center {
-    margin-top: 70px;
-    padding-top: 16px;
-  }
+  .home-main:has(.fixed-question-title) .home-center { margin-top: 0; padding-top: 0; }
 }
 
 </style>

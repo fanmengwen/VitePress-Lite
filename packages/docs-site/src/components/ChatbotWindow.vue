@@ -45,20 +45,13 @@
         <!-- Messages Container -->
       <div class="messages-container" ref="messagesContainer">
         <!-- Sticky question header (inline mode) -->
-        <div 
+        <!-- <div 
           v-if="inline && (currentQuestion || lastQuestion)"
           class="sticky-question-header"
         >
-        </div>
+          <h2 class="question-title">{{ currentQuestion || lastQuestion }}</h2>
+        </div> -->
         <div class="messages-inner">
-          <!-- Step badges / progress -->
-          <div v-if="progress.stage" class="progress-bar">
-            <div class="progress-dot" :class="{ done: progress.stage !== 'retrieve' }">1</div>
-            <span :class="{ active: progress.stage === 'retrieve' }">检索</span>
-            <div class="progress-line" :class="{ done: progress.stage !== 'retrieve' }"></div>
-            <div class="progress-dot" :class="{ done: progress.stage === 'done' }">2</div>
-            <span :class="{ active: progress.stage === 'generate' }">生成</span>
-          </div>
           <div v-if="historyLoading" class="conversation-status loading">
             <div class="loading-spinner"></div>
             <span>正在加载对话记录...</span>
@@ -100,32 +93,32 @@
               'ai-message': message.role === 'assistant' 
             }"
           >
-            <div class="message-avatar">
-              {{ message.role === 'user' ? '👤' : '🤖' }}
-            </div>
-            <div class="message-content">
-              <div class="message-text" v-html="formatMessage(message.content)"></div>
-              <div class="message-time">{{ formatTime(message.timestamp) }}</div>
-              
-              <!-- Sources for AI messages - Perplexity Style -->
-              <div v-if="message.sources && message.sources.length > 0" class="message-sources perplexity-sources">
-                <h5 class="sources-header">📚 参考资料：</h5>
-                <div class="sources-grid">
+            <!-- Simple source cards shown UNDER the answer (no header, no similarity) -->
+            <div 
+                v-if="message.role === 'assistant' && message.sources && message.sources.length > 0" 
+                class="answer-sources"
+              >
+                <div class="answer-sources-grid">
                   <div 
                     v-for="(source, index) in message.sources" 
                     :key="source.file_path + source.chunk_index"
-                    class="source-card"
+                    class="answer-source-card"
                     @click="navigateToSource(source)"
                     :title="`点击跳转到：${source.title}`"
                   >
-                    <div class="source-number">{{ index + 1 }}</div>
-                    <div class="source-content">
-                      <div class="source-title">{{ source.title }}</div>
-                      <div class="source-score">相似度: {{ Math.round(source.similarity_score * 100) }}%</div>
+                    <div class="answer-source-header">
+                      <div class="answer-source-favicon">📄</div>
+                      <div class="answer-source-domain">{{ (source.file_path || '').split('/')[0] || '文档' }}</div>
                     </div>
+                    <div class="answer-source-desc">{{ source.title }}</div>
                   </div>
                 </div>
               </div>
+            <div class="message-content">
+              <!-- Answer text (no border/background) -->
+              <div class="message-text" v-html="formatMessage(message.content)"></div>
+
+             <div class="message-line" v-show="message.role === 'assistant'"></div>
             </div>
           </div>
 
@@ -417,7 +410,12 @@ watch(
       resetConversationState();
       return;
     }
-    if (newId === currentConversationId.value && !historyError.value) {
+    // Skip only when already loaded for this id and no error
+    if (
+      newId === currentConversationId.value &&
+      messages.value.length > 0 &&
+      !historyError.value
+    ) {
       return;
     }
     loadConversation(newId);
@@ -427,11 +425,26 @@ watch(
 
 watch(
   activeConversationId,
-  (newId) => {
-    if (!props.conversationId && newId) {
-      currentConversationId.value = newId;
+  async (newId) => {
+    // If parent controls via prop, don't auto-load by active id
+    if (props.conversationId) return;
+
+    // No active id → reset
+    if (!newId) {
+      currentConversationId.value = null;
+      resetConversationState();
+      return;
     }
+
+    // Skip duplicate loads if already hydrated and no error
+    if (newId === currentConversationId.value && messages.value.length > 0 && !historyError.value) {
+      return;
+    }
+
+    currentConversationId.value = newId;
+    await loadConversation(newId);
   },
+  { immediate: true },
 );
 
 const sendMessage = async () => {
@@ -466,6 +479,7 @@ const sendMessage = async () => {
   if (messages.value.length > props.maxMessages) {
     messages.value.splice(0, messages.value.length - props.maxMessages);
   }
+  // Move conversation to top only when user actually sends a message
   markActivity(conversationId, userMessage.timestamp);
   
   await scrollToBottom();
@@ -622,7 +636,6 @@ const formatMessage = (content: string) => {
     .replace(/^# (.+)$/gm, '<h2 class="msg-h2">$1</h2>')
     // 处理换行，但保持段落结构
     .replace(/\n\n/g, '</p><p class="msg-paragraph">')
-    .replace(/\n/g, '<br>')
     // 添加段落包装
     .replace(/^(.+)/, '<p class="msg-paragraph">$1')
     .replace(/(.+)$/, '$1</p>')
@@ -861,7 +874,6 @@ defineExpose({ ask, open, close, currentQuestion });
 /* Messages */
 .messages-container {
   flex: 1;
-  overflow-y: auto;
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -892,8 +904,25 @@ defineExpose({ ask, open, close, currentQuestion });
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 16px;
   height: calc(100% - 40px);
+}
+
+/* Sticky question header (top question) */
+.sticky-question-header {
+  position: sticky;
+  top: 0;
+  background: var(--color-bg-primary, #ffffff);
+  border-bottom: 1px solid var(--color-border-default, rgba(0, 0, 0, 0.08));
+  padding: 12px 0;
+  margin-bottom: 12px;
+  z-index: 10;
+}
+
+.question-title {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.4;
+  font-weight: 600;
 }
 
 .progress-bar { display: flex; align-items: center; gap: 8px; justify-content: center; margin-bottom: 4px; color: #8a8a8a; font-size: 12px; }
@@ -931,9 +960,7 @@ defineExpose({ ask, open, close, currentQuestion });
 }
 
 .message {
-  display: flex;
   gap: 0.75rem;
-  align-items: flex-start;
 }
 
 .message-avatar {
@@ -961,10 +988,10 @@ defineExpose({ ask, open, close, currentQuestion });
 }
 
 .message-text {
-  background: #f5f5f5;
-  padding: 0.75rem;
-  border-radius: 12px;
-  line-height: 1.5;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  line-height: 1.6;
   word-wrap: break-word;
 }
 
@@ -974,13 +1001,11 @@ defineExpose({ ask, open, close, currentQuestion });
 
 .chatbot-window.inline-mode .ai-message .message-text {
   background: #ffffff;
-  border: 1px solid var(--color-border-default);
   color: var(--color-text-primary);
   font-size: 15px;
   line-height: 1.75;
   padding: 12px 14px;
   border-radius: 12px;
-  box-shadow: var(--shadow-sm);
 }
 
 .chatbot-window.inline-mode .user-message { justify-content: flex-end; }
@@ -997,31 +1022,17 @@ defineExpose({ ask, open, close, currentQuestion });
   margin: 4px 0;
 }
 
-.chatbot-window.inline-mode .ai-message .message-text {
-  background: transparent;
-  padding: 0;
-  font-size: 16px;
-  line-height: 1.6;
-}
+.chatbot-window.inline-mode .ai-message .message-text { background: transparent; padding: 0; font-size: 16px; line-height: 1.7; }
 
 .chatbot-window.inline-mode .message-avatar { display: none; }
 
 .chatbot-window.inline-mode .ai-message .message-content {align-self: flex-start; }
 
-/* Hide welcome message in inline mode */
-.chatbot-window.inline-mode .welcome-message {
-  display: none;
-}
+
 
 /* Perplexity-style Sources Layout */
-.perplexity-sources {
-  background: transparent !important;
-  border: none !important;
-  border-radius: 0 !important;
-  border-left: none !important;
-  padding: 24px 0 !important;
-  margin: 32px 0 !important;
-}
+/* Deprecated old sources block kept for compatibility, not used now */
+.perplexity-sources { display: none; }
 
 .sources-header {
   font-size: 14px !important;
@@ -1032,25 +1043,27 @@ defineExpose({ ask, open, close, currentQuestion });
 
 .sources-grid {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
+  flex-wrap: nowrap;
+  gap: 12px;
+  margin-top: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
 }
 
 .source-card {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 8px 10px;
+  border-radius: 10px;
+  padding: 10px 12px;
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
   flex: 0 0 auto;
-  min-width: 120px;
-  max-width: 200px;
+  height: 56px;
+  min-width: 220px;
 }
 
 .source-card:hover {
@@ -1063,15 +1076,15 @@ defineExpose({ ask, open, close, currentQuestion });
 .source-number {
   background: #667eea;
   color: white;
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
-  font-weight: 600;
-  margin-right: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  margin-right: 10px;
   flex-shrink: 0;
 }
 
@@ -1081,10 +1094,10 @@ defineExpose({ ask, open, close, currentQuestion });
 }
 
 .source-title {
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
   color: #1e293b;
-  line-height: 1.3;
+  line-height: 1.25;
   margin-bottom: 2px;
   display: -webkit-box;
   line-clamp: 1;
@@ -1094,10 +1107,37 @@ defineExpose({ ask, open, close, currentQuestion });
 }
 
 .source-score {
-  font-size: 9px;
+  font-size: 10px;
   color: #64748b;
   font-weight: 500;
 }
+
+.answer-sources-grid {
+  display: flex;
+  gap: 12px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding: 2px 2px 6px 2px;
+}
+.answer-source-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  height: 72px;
+  flex: 0 0 auto;
+  width: 120px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.answer-source-card:hover { background: #f1f5f9; border-color: #cbd5e1; transform: translateY(-1px); }
+.answer-source-header { display: flex; align-items: center; gap: 8px; }
+.answer-source-favicon { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.answer-source-domain { font-size: 12px; color: #64748b; }
+.answer-source-desc { font-size: 14px; color: #0f172a; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 @media (prefers-color-scheme: dark) {
   .message-text {
@@ -1111,16 +1151,10 @@ defineExpose({ ask, open, close, currentQuestion });
   margin-left: auto;
 }
 
-.message-time {
-  font-size: 0.75rem;
-  color: #666;
-  margin-top: 0.25rem;
-}
 
-@media (prefers-color-scheme: dark) {
-  .message-time {
-    color: #999;
-  }
+.message-line {
+  border: 1px solid var(--color-border-default);
+  margin-top: 18px;
 }
 
 /* Sources */
@@ -1361,7 +1395,7 @@ defineExpose({ ask, open, close, currentQuestion });
   resize: none;
   outline: none;
   transition: border-color 0.2s;
-  min-height: 44px;
+
   max-height: 120px;
   font-family: inherit;
 }

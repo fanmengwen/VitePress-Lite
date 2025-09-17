@@ -27,9 +27,11 @@ const upsertConversation = (item: ConversationInfo) => {
 const updateConversation = (id: string, patch: Partial<ConversationInfo>) => {
   const idx = conversations.value.findIndex((c) => c.id === id);
   if (idx === -1) return;
-  const updated = { ...conversations.value[idx], ...patch };
-  const rest = conversations.value.filter((c, i) => i !== idx);
-  conversations.value = [updated, ...rest];
+  const updated = { ...conversations.value[idx], ...patch } as ConversationInfo;
+  const nextList = conversations.value.slice();
+  nextList[idx] = updated;
+  // Re-sort by updated_at so items only move when timestamp actually changes
+  setConversations(nextList);
 };
 
 export function useConversations() {
@@ -82,13 +84,8 @@ export function useConversations() {
   const loadDetail = async (conversationId: string): Promise<ConversationDetail> => {
     const detail = await aiApiClient.getConversation(conversationId);
     if (detail) {
-      updateConversation(conversationId, {
-        title: detail.title,
-        updated_at:
-          detail.messages.length > 0
-            ? detail.messages[detail.messages.length - 1].timestamp
-            : new Date().toISOString(),
-      });
+      // Do not change updated_at on a simple view to avoid reordering
+      updateConversation(conversationId, { title: detail.title });
     }
     return detail;
   };
