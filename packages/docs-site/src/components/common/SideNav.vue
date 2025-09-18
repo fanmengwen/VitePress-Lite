@@ -94,8 +94,7 @@
       <div class="user-info">
         <div class="avatar">🧑🏻‍💻</div>
         <div class="user-meta">
-          <span class="user-name">单用户演示版</span>
-          <span class="user-tag">本地运行</span>
+          <span class="user-name">游客用户</span>
         </div>
       </div>
     </footer>

@@ -904,7 +904,6 @@ defineExpose({ ask, open, close, currentQuestion });
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  height: calc(100% - 40px);
 }
 
 /* Sticky question header (top question) */
@@ -987,6 +986,26 @@ defineExpose({ ask, open, close, currentQuestion });
   max-width: calc(100% - 48px);
 }
 
+/* Align user message content to the right (container-level) */
+.messages-inner > .message.user-message .message-content {
+  margin-left: auto;
+  width: fit-content;
+}
+
+/* Add project-themed icon to AI answers (normal and inline), exclude loading/error */
+.messages-inner > .message.ai-message:not(.loading-message):not(.error-message) .message-content {
+  position: relative;
+  padding-left: 22px; /* space for icon */
+}
+
+.messages-inner > .message.ai-message:not(.loading-message):not(.error-message) .message-content::before {
+  content: '⚡️';
+  position: absolute;
+  left: -10px;
+  top: 5px;
+  line-height: 1;
+}
+
 .message-text {
   background: transparent;
   padding: 0;
@@ -996,7 +1015,7 @@ defineExpose({ ask, open, close, currentQuestion });
 }
 
 /* Inline mode message styling */
-.chatbot-window.inline-mode .message { margin: 6px 0; }
+.chatbot-window.inline-mode .message { margin: 16px 0; }
 .chatbot-window.inline-mode .message-content { max-width: 100%; }
 
 .chatbot-window.inline-mode .ai-message .message-text {
@@ -1016,9 +1035,8 @@ defineExpose({ ask, open, close, currentQuestion });
   font-size: 15px;
   line-height: 1.7;
   padding: 10px 14px;
-  border-radius: 14px;
+  border-radius: 24px 0 24px 24px;
   width: fit-content;
-  max-width: 80%;
   margin: 4px 0;
 }
 
@@ -1129,7 +1147,8 @@ defineExpose({ ask, open, close, currentQuestion });
   padding: 10px 12px;
   height: 72px;
   flex: 0 0 auto;
-  width: 120px;
+  min-width: 120px;
+  max-width: 320px;
   cursor: pointer;
   transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -1154,7 +1173,8 @@ defineExpose({ ask, open, close, currentQuestion });
 
 .message-line {
   border: 1px solid var(--color-border-default);
-  margin-top: 18px;
+  margin-top: 24px;
+  margin-bottom: 32px;
 }
 
 /* Sources */

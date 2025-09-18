@@ -130,7 +130,7 @@ const onAskQuick = async (q: string) => {
 }
 
 .home-center {
-  width: 1012px;
+  width: 860px;
   justify-content: center;
   max-width: 100%;
   display: flex;
@@ -184,7 +184,6 @@ const onAskQuick = async (q: string) => {
 .chip:hover { background: var(--color-primary-50); color: var(--color-primary); border-color: var(--color-primary-100); }
 
 .chat-area { 
-  margin-top: 16px; 
   width: 100%; 
   padding: 28px;
   background: transparent;
