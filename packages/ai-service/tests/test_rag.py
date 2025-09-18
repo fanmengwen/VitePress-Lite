@@ -4,7 +4,7 @@ Focuses on testing individual, isolated methods.
 """
 
 import pytest
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock, AsyncMock, ANY
 from types import SimpleNamespace
 
 from ai_service.services.rag import RAGPipeline
@@ -146,8 +146,15 @@ class TestRAGPipelineConversationFlow:
         assert response.conversation_id == "new-conv-id"
         create_conv_mock.assert_awaited_once()
         assert append_mock.await_count == 2
-        append_mock.assert_any_await("new-conv-id", role="user", content="Explain Vite")
-        append_mock.assert_any_await("new-conv-id", role="assistant", content="Mock answer")
+        append_mock.assert_any_await(
+            "new-conv-id", role="user", content="Explain Vite", metadata=None
+        )
+        append_mock.assert_any_await(
+            "new-conv-id",
+            role="assistant",
+            content="Mock answer",
+            metadata=ANY,
+        )
 
     @pytest.mark.asyncio
     async def test_reuses_existing_conversation(self, monkeypatch):
@@ -207,7 +214,7 @@ class TestRAGPipelineConversationFlow:
         assert response.conversation_id == "existing-conv"
         create_conv_mock.assert_not_called()
         append_mock.assert_any_await(
-            "existing-conv", role="user", content="Tell me more"
+            "existing-conv", role="user", content="Tell me more", metadata=None
         )
 
     @pytest.mark.asyncio

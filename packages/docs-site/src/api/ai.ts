@@ -10,6 +10,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
+  sources?: SourceReference[];
 }
 
 export interface SourceReference {

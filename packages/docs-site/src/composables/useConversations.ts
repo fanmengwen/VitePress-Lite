@@ -10,6 +10,7 @@ const activeConversationId = ref<string | null>(null);
 const loading = ref(false);
 const error = ref<string | null>(null);
 let initialized = false;
+const drafting = ref(false);
 
 const pendingLoad = ref<Promise<void> | null>(null);
 
@@ -17,6 +18,11 @@ const setConversations = (items: ConversationInfo[]) => {
   conversations.value = items.sort((a, b) =>
     new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
   );
+};
+
+const setActiveInternal = (conversationId: string | null) => {
+  activeConversationId.value = conversationId;
+  drafting.value = conversationId === null;
 };
 
 const upsertConversation = (item: ConversationInfo) => {
@@ -45,7 +51,7 @@ export function useConversations() {
         setConversations(items);
         initialized = true;
         if (!activeConversationId.value && items.length > 0) {
-          activeConversationId.value = items[0].id;
+          setActiveInternal(items[0].id);
         }
         error.value = null;
       })
@@ -77,7 +83,7 @@ export function useConversations() {
   const create = async (title?: string) => {
     const convo = await aiApiClient.createConversation(title ? { title } : undefined);
     upsertConversation(convo);
-    activeConversationId.value = convo.id;
+    setActiveInternal(convo.id);
     return convo;
   };
 
@@ -90,9 +96,7 @@ export function useConversations() {
     return detail;
   };
 
-  const setActive = (conversationId: string | null) => {
-    activeConversationId.value = conversationId;
-  };
+  const setActive = (conversationId: string | null) => setActiveInternal(conversationId);
 
   const markRenamed = (conversationId: string, title: string) => {
     updateConversation(conversationId, { title });
@@ -109,7 +113,7 @@ export function useConversations() {
     const filtered = conversations.value.filter((c) => c.id !== conversationId);
     conversations.value = filtered;
     if (activeConversationId.value === conversationId) {
-      activeConversationId.value = filtered.length ? filtered[0].id : null;
+      setActiveInternal(filtered.length ? filtered[0].id : null);
     }
   };
 
@@ -126,6 +130,7 @@ export function useConversations() {
     markRenamed,
     markActivity,
     remove,
+    isDrafting: computed(() => drafting.value),
     hasConversations: computed(() => conversations.value.length > 0),
     activeConversation: computed(() =>
       conversations.value.find((c) => c.id === activeConversationId.value) || null,

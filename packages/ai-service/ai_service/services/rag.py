@@ -156,10 +156,19 @@ class RAGPipeline:
                 )
                 # append user question and assistant answer
                 await conversation_store.append_message(
-                    conversation_id, role="user", content=request.question
+                    conversation_id,
+                    role="user",
+                    content=request.question,
                 )
                 await conversation_store.append_message(
-                    conversation_id, role="assistant", content=answer
+                    conversation_id,
+                    role="assistant",
+                    content=answer,
+                    metadata={
+                        "sources": [s.model_dump() for s in sources] if sources else [],
+                    }
+                    if sources
+                    else None,
                 )
             except Exception as exc:
                 # Persistence errors should not break chat; continue without raising

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 import asyncio
+import json
 
 
 def _utcnow_iso() -> str:
@@ -29,6 +30,7 @@ class Message:
     role: str
     content: str
     created_at: str
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class ConversationStore:
@@ -127,15 +129,26 @@ class ConversationStore:
 
     # --- message operations ---
     async def append_message(
-        self, conversation_id: str, role: str, content: str
+        self,
+        conversation_id: str,
+        role: str,
+        content: str,
+        *,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> int:
         now = _utcnow_iso()
 
         def _append() -> int:
             with self._connect() as conn:
                 cur = conn.execute(
-                    "INSERT INTO messages (conversation_id, role, content, created_at) VALUES (?, ?, ?, ?)",
-                    (conversation_id, role, content, now),
+                    "INSERT INTO messages (conversation_id, role, content, created_at, metadata) VALUES (?, ?, ?, ?, ?)",
+                    (
+                        conversation_id,
+                        role,
+                        content,
+                        now,
+                        json.dumps(metadata, ensure_ascii=False) if metadata else None,
+                    ),
                 )
                 conn.execute(
                     "UPDATE conversations SET updated_at = ? WHERE id = ?",
@@ -152,7 +165,7 @@ class ConversationStore:
         def _get() -> List[Message]:
             with self._connect() as conn:
                 sql = (
-                    "SELECT id, conversation_id, role, content, created_at FROM messages "
+                    "SELECT id, conversation_id, role, content, created_at, metadata FROM messages "
                     "WHERE conversation_id = ? ORDER BY datetime(created_at) ASC"
                 )
                 rows = conn.execute(sql, (conversation_id,)).fetchall()
@@ -163,6 +176,7 @@ class ConversationStore:
                         role=r["role"],
                         content=r["content"],
                         created_at=r["created_at"],
+                        metadata=json.loads(r["metadata"]) if r["metadata"] else None,
                     )
                     for r in rows
                 ]

@@ -4,7 +4,12 @@ Conversation management endpoints.
 
 from fastapi import APIRouter, HTTPException, Query
 
-from ai_service.models.chat import ConversationInfo, ConversationDetail, ChatMessage
+from ai_service.models.chat import (
+    ConversationInfo,
+    ConversationDetail,
+    ChatMessage,
+    SourceReference,
+)
 from ai_service.services.conversation_store import conversation_store
 
 router = APIRouter()
@@ -45,10 +50,30 @@ async def get_conversation(conversation_id: str) -> ConversationDetail:
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
     msgs = await conversation_store.get_messages(conversation_id)
-    mapped = [
-        ChatMessage(role=m.role, content=m.content, timestamp=m.created_at)
-        for m in msgs
-    ]
+    mapped = []
+    for m in msgs:
+        metadata = getattr(m, "metadata", None) or {}
+        raw_sources = metadata.get("sources") if isinstance(metadata, dict) else None
+        sources = None
+        if isinstance(raw_sources, list):
+            parsed_sources: list[SourceReference] = []
+            for item in raw_sources:
+                if isinstance(item, dict):
+                    try:
+                        parsed_sources.append(SourceReference.model_validate(item))
+                    except Exception:
+                        continue
+            if parsed_sources:
+                sources = parsed_sources
+
+        mapped.append(
+            ChatMessage(
+                role=m.role,
+                content=m.content,
+                timestamp=m.created_at,
+                sources=sources,
+            )
+        )
     return ConversationDetail(id=conv.id, title=conv.title, messages=mapped)
 
 

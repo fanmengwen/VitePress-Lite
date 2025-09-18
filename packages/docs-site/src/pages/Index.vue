@@ -66,7 +66,7 @@ const quickQuestions = [
   'Vite的插件有哪些？',
 ];
 
-const { activeConversationId, create, setActive, ensureLoaded } = useConversations();
+const { activeConversationId, setActive, ensureLoaded, isDrafting } = useConversations();
 
 const isPreparingConversation = ref(false);
 const askError = ref('');
@@ -75,17 +75,13 @@ onMounted(() => {
   ensureLoaded();
 });
 
-const showChat = computed(() => Boolean(activeConversationId.value));
+const showChat = computed(() => Boolean(activeConversationId.value) || isDrafting.value);
 
-const ensureActiveConversation = async () => {
-  if (activeConversationId.value) {
-    return activeConversationId.value;
-  }
+const ensureChatReady = async () => {
   isPreparingConversation.value = true;
   try {
-    const convo = await create();
-    setActive(convo.id);
-    return convo.id;
+    setActive(null);
+    await nextTick();
   } finally {
     isPreparingConversation.value = false;
   }
@@ -96,8 +92,7 @@ const onAsk = async () => {
   if (!q || isPreparingConversation.value) return;
   askError.value = '';
   try {
-    await ensureActiveConversation();
-    await nextTick();
+    await ensureChatReady();
     await chatRef.value?.ask(q);
     askText.value = '';
   } catch (error) {

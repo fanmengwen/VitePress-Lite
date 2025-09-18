@@ -46,7 +46,16 @@
           <div class="skeleton" v-for="n in 3" :key="n"></div>
         </div>
 
-        <ul v-else-if="hasConversations" class="history-list">
+        <ul v-else-if="hasConversations || isDrafting" class="history-list">
+          <li
+            v-if="isDrafting"
+            class="history-item draft active"
+          >
+            <div class="history-button" @click="handleSelectDraft">
+              <div class="history-title">新的对话</div>
+              <div class="history-meta">等待你的问题…</div>
+            </div>
+          </li>
           <li
             v-for="item in conversations"
             :key="item.id"
@@ -125,12 +134,11 @@ const {
   error,
   ensureLoaded,
   refresh,
-  create,
   setActive,
   remove,
   hasConversations,
+  isDrafting,
 } = useConversations();
-  console.log("🚀 ~ activeConversationId:", activeConversationId)
 
 const actionError = ref<string | null>(null);
 const showDeleteModal = ref(false);
@@ -172,11 +180,10 @@ const handleNewConversation = async () => {
   actionError.value = null;
   isCreating.value = true;
   try {
-    const convo = await create();
     if (route.path !== '/') {
       await router.push('/');
     }
-    setActive(convo.id);
+    setActive(null);
   } catch (err) {
     actionError.value = err instanceof Error ? err.message : '创建对话失败，请稍后重试。';
   } finally {
@@ -187,6 +194,14 @@ const handleNewConversation = async () => {
 const handleSelectConversation = async (conversationId: string) => {
   actionError.value = null;
   setActive(conversationId);
+  if (route.path !== '/') {
+    await router.push('/');
+  }
+};
+
+const handleSelectDraft = async () => {
+  actionError.value = null;
+  setActive(null);
   if (route.path !== '/') {
     await router.push('/');
   }
@@ -437,6 +452,21 @@ const githubUrl =
 .history-item.active {
   border: 1px solid var(--color-primary-100);
   background: rgba(102, 126, 234, 0.12);
+}
+
+.history-item.draft {
+  border: 1px dashed rgba(102, 126, 234, 0.4);
+  background: rgba(102, 126, 234, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.history-item.draft .history-title {
+  color: var(--color-primary);
+}
+
+.history-item.draft .history-meta {
+  color: rgba(102, 126, 234, 0.8);
+  font-style: italic;
 }
 
 .history-button {

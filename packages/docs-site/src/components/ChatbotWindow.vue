@@ -212,8 +212,8 @@ const {
   activeConversationId,
   activeConversation,
   setActive,
-  create,
   loadDetail,
+  refresh,
   markActivity,
   markRenamed,
 } = useConversations();
@@ -326,11 +326,20 @@ const resetConversationState = () => {
 };
 
 const hydrateConversation = (detail: ConversationDetail) => {
-  const hydrated = detail.messages.map((msg) => ({
-    role: msg.role as 'user' | 'assistant',
-    content: msg.content,
-    timestamp: typeof msg.timestamp === 'string' ? msg.timestamp : new Date(msg.timestamp).toISOString(),
-  }));
+  const hydrated = detail.messages.map((msg) => {
+    const base = {
+      role: msg.role as 'user' | 'assistant',
+      content: msg.content,
+      timestamp:
+        typeof msg.timestamp === 'string'
+          ? msg.timestamp
+          : new Date(msg.timestamp).toISOString(),
+    } as ChatMessage & { sources?: SourceReference[] };
+    if (msg.sources && msg.sources.length > 0) {
+      base.sources = msg.sources;
+    }
+    return base;
+  });
   messages.value = hydrated;
 
   const lastUser = [...hydrated].reverse().find((msg) => msg.role === 'user');
@@ -360,7 +369,7 @@ const loadConversation = async (conversationId: string) => {
   }
 };
 
-const ensureConversation = async (): Promise<string> => {
+const ensureConversation = async (): Promise<string | null> => {
   if (currentConversationId.value) {
     return currentConversationId.value;
   }
@@ -372,11 +381,7 @@ const ensureConversation = async (): Promise<string> => {
   if (!props.autoCreateConversation) {
     throw new Error('No active conversation. 创建对话后再发送消息。');
   }
-  const convo = await create();
-  currentConversationId.value = convo.id;
-  setActive(convo.id);
-  resetConversationState();
-  return convo.id;
+  return null;
 };
 
 const maybeRenameConversation = async (conversationId: string, question: string) => {
@@ -458,7 +463,7 @@ const sendMessage = async () => {
   hasError.value = false;
   errorMessage.value = '';
 
-  let conversationId: string;
+  let conversationId: string | null = null;
   try {
     conversationId = await ensureConversation();
   } catch (error) {
@@ -467,7 +472,9 @@ const sendMessage = async () => {
     errorMessage.value = getAIErrorMessage(error);
     return;
   }
-  currentConversationId.value = conversationId;
+  if (conversationId) {
+    currentConversationId.value = conversationId;
+  }
 
   // Add user message
   const userMessage: ChatMessage = {
@@ -480,7 +487,9 @@ const sendMessage = async () => {
     messages.value.splice(0, messages.value.length - props.maxMessages);
   }
   // Move conversation to top only when user actually sends a message
-  markActivity(conversationId, userMessage.timestamp);
+  if (conversationId) {
+    markActivity(conversationId, userMessage.timestamp);
+  }
   
   await scrollToBottom();
 
@@ -520,7 +529,7 @@ const sendMessage = async () => {
       history,
       include_sources: showSources.value,
       temperature: 0.1,
-      conversation_id: conversationId,
+      conversation_id: conversationId ?? undefined,
     });
 
     // Merge sources (vector-search + final)
@@ -548,14 +557,21 @@ const sendMessage = async () => {
       messages.value.splice(0, messages.value.length - props.maxMessages);
     }
     const resolvedConversationId = response.conversation_id || conversationId;
-    if (resolvedConversationId !== conversationId) {
-      currentConversationId.value = resolvedConversationId;
-      setActive(resolvedConversationId);
+    if (resolvedConversationId) {
+      const wasNewConversation = !conversationId;
+      if (resolvedConversationId !== currentConversationId.value) {
+        currentConversationId.value = resolvedConversationId;
+        setActive(resolvedConversationId);
+      }
+      if (wasNewConversation) {
+        await refresh().catch(() => {});
+      }
+      markActivity(resolvedConversationId, aiMessage.timestamp);
+      progress.value.stage = 'done';
+      await maybeRenameConversation(resolvedConversationId, question);
+    } else {
+      progress.value.stage = 'done';
     }
-    markActivity(resolvedConversationId, aiMessage.timestamp);
-    progress.value.stage = 'done';
-
-    await maybeRenameConversation(resolvedConversationId, question);
 
   } catch (error) {
     hasError.value = true;
@@ -881,6 +897,17 @@ defineExpose({ ask, open, close, currentQuestion });
   width: 100%;
 }
 
+.messages-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 12px 24px;
+  box-sizing: border-box;
+}
+
 /* Hide header in inline mode */
 .chatbot-window.inline-mode .chat-header {
   display: none;
@@ -899,11 +926,7 @@ defineExpose({ ask, open, close, currentQuestion });
 }
 
 .chatbot-window.inline-mode .messages-inner {
-  width: 100%;
-  max-width: 100%;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
+  max-width: 760px;
 }
 
 /* Sticky question header (top question) */
@@ -958,60 +981,87 @@ defineExpose({ ask, open, close, currentQuestion });
   to { transform: rotate(360deg); }
 }
 
+
 .message {
-  gap: 0.75rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 6px 0;
+}
+
+.message.user-message {
+  flex-direction: row-reverse;
 }
 
 .message-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
+  font-size: 0.95rem;
   flex-shrink: 0;
+  background: linear-gradient(135deg, #6d7efb 0%, #8a5cf1 100%);
+  color: #fff;
+  box-shadow: 0 8px 16px rgba(109, 126, 251, 0.2);
 }
 
-.user-message .message-avatar {
-  background: #667eea;
-}
-
-.ai-message .message-avatar {
-  background: #764ba2;
+.message.user-message .message-avatar {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
 }
 
 .message-content {
   flex: 1;
-  max-width: calc(100% - 48px);
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
 }
 
-/* Align user message content to the right (container-level) */
-.messages-inner > .message.user-message .message-content {
-  margin-left: auto;
-  width: fit-content;
+.message.user-message .message-content {
+  align-items: flex-end;
 }
 
-/* Add project-themed icon to AI answers (normal and inline), exclude loading/error */
-.messages-inner > .message.ai-message:not(.loading-message):not(.error-message) .message-content {
-  position: relative;
-  padding-left: 22px; /* space for icon */
+/* Ensure AI answer body and sources stack vertically
+   and keep the answer body on top, sources below */
+.message.ai-message {
+  flex-direction: column;
+  align-items: stretch;
 }
 
-.messages-inner > .message.ai-message:not(.loading-message):not(.error-message) .message-content::before {
-  content: '⚡️';
-  position: absolute;
-  left: -10px;
-  top: 5px;
-  line-height: 1;
+.message.ai-message .message-content {
+  order: 1;
+  width: 100%;
+  max-width: 100%;
+}
+
+.message.ai-message .answer-sources {
+  order: 2;
+  width: 100%;
 }
 
 .message-text {
-  background: transparent;
-  padding: 0;
-  border-radius: 0;
-  line-height: 1.6;
-  word-wrap: break-word;
+  background: #fff;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 12px 16px;
+  border-radius: 18px;
+  line-height: 1.62;
+  word-break: break-word;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  display: inline-block;
+  max-width: min(640px, 100%);
+}
+
+.message.user-message .message-text {
+  background: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%);
+  color: #fff;
+  border: none;
+  border-radius: 18px 4px 18px 18px;
+  box-shadow: 0 12px 24px rgba(99, 102, 241, 0.35);
+  align-self: flex-end;
 }
 
 /* Inline mode message styling */
@@ -1130,133 +1180,94 @@ defineExpose({ ask, open, close, currentQuestion });
   font-weight: 500;
 }
 
+.answer-sources {
+  width: 100%;
+}
+
 .answer-sources-grid {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  padding: 2px 2px 6px 2px;
 }
+
 .answer-source-card {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 10px 12px;
-  height: 72px;
-  flex: 0 0 auto;
-  min-width: 120px;
-  max-width: 320px;
+  background: linear-gradient(180deg, rgba(248, 250, 255, 0.95) 0%, rgba(241, 245, 249, 0.92) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 14px;
+  padding: 12px 16px;
+  width: clamp(180px, 30%, 240px);
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
 }
-.answer-source-card:hover { background: #f1f5f9; border-color: #cbd5e1; transform: translateY(-1px); }
-.answer-source-header { display: flex; align-items: center; gap: 8px; }
-.answer-source-favicon { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
-.answer-source-domain { font-size: 12px; color: #64748b; }
-.answer-source-desc { font-size: 14px; color: #0f172a; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.answer-source-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 18px 32px rgba(99, 102, 241, 0.18);
+}
+.answer-source-header { display: flex; align-items: center; gap: 10px; }
+.answer-source-favicon {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  border-radius: 6px;
+  background: rgba(99, 102, 241, 0.12);
+}
+.answer-source-domain {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.answer-source-desc {
+  font-size: 14px;
+  color: #0f172a;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-line {
+  height: 1px;
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0), rgba(148, 163, 184, 0.4), rgba(148, 163, 184, 0));
+  margin: 20px 0 28px;
+}
 
 @media (prefers-color-scheme: dark) {
   .message-text {
-    background: #2d2d2d;
+    background: rgba(30, 41, 59, 0.85);
+    border-color: rgba(148, 163, 184, 0.2);
+    color: #e2e8f0;
   }
-}
 
-.user-message .message-text {
-  background: #667eea;
-  color: white;
-  margin-left: auto;
-}
+  .message.user-message .message-text {
+    background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 100%);
+    box-shadow: 0 10px 22px rgba(124, 58, 237, 0.35);
+  }
 
+  .answer-source-card {
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.92) 100%);
+    border-color: rgba(99, 102, 241, 0.2);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.4);
+    color: #e2e8f0;
+  }
 
-.message-line {
-  border: 1px solid var(--color-border-default);
-  margin-top: 24px;
-  margin-bottom: 32px;
-}
+  .answer-source-domain {
+    color: rgba(148, 163, 184, 0.85);
+  }
 
-/* Sources */
-.message-sources {
-  margin-top: 0.75rem;
-  padding: 0.75rem;
-  background: rgba(102, 126, 234, 0.1);
-  border-radius: 8px;
-  border-left: 3px solid #667eea;
-}
-
-.message-sources h5 {
-  margin: 0 0 0.5rem 0;
-  font-size: 0.875rem;
-  color: #667eea;
-}
-
-.sources-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.source-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.75rem;
-  padding: 0.5rem;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 6px;
-  transition: all 0.2s ease;
-  position: relative;
-}
-
-/* Clickable source styling */
-.source-item.clickable {
-  cursor: pointer;
-  border: 1px solid transparent;
-}
-
-.source-item.clickable:hover {
-  background: rgba(102, 126, 234, 0.15);
-  border-color: rgba(102, 126, 234, 0.3);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
-}
-
-.source-item.clickable:active {
-  transform: translateY(0);
-  box-shadow: 0 1px 4px rgba(102, 126, 234, 0.2);
-}
-
-.source-title {
-  font-weight: 500;
-  color: #333;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  flex: 1;
-}
-
-.source-icon {
-  font-size: 0.875rem;
-  opacity: 0.7;
-}
-
-.source-score {
-  color: #667eea;
-  font-weight: 600;
-  margin: 0 0.5rem;
-}
-
-.source-link-icon {
-  font-size: 0.75rem;
-  opacity: 0.6;
-  transition: opacity 0.2s ease;
-}
-
-.source-item.clickable:hover .source-link-icon {
-  opacity: 1;
-  transform: scale(1.1);
+  .answer-source-desc {
+    color: #f8fafc;
+  }
 }
 
 /* Welcome Message */

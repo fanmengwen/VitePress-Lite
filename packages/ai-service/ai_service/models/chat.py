@@ -9,10 +9,16 @@ from datetime import datetime
 
 class ChatMessage(BaseModel):
     """Individual chat message."""
-    
+
+    model_config = ConfigDict(extra="ignore")
+
     role: str = Field(..., description="Message role: 'user' or 'assistant'")
     content: str = Field(..., description="Message content")
     timestamp: datetime = Field(default_factory=datetime.now, description="Message timestamp")
+    sources: Optional[List["SourceReference"]] = Field(
+        default=None,
+        description="Source references attached to assistant replies",
+    )
 
 
 class ChatRequest(BaseModel):
@@ -58,6 +64,10 @@ class SourceReference(BaseModel):
     chunk_index: int = Field(..., description="Chunk index within document")
     similarity_score: float = Field(..., description="Similarity score")
     content_preview: str = Field(..., description="Preview of relevant content")
+
+
+# Resolve forward references now that SourceReference is defined
+ChatMessage.model_rebuild()
 
 
 class ChatResponse(BaseModel):
