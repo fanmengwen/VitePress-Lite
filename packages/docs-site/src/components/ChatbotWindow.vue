@@ -1097,6 +1097,7 @@ defineExpose({ ask, open, close, currentQuestion });
 .chatbot-window.inline-mode .ai-message .message-text {
   font-size: 17px;
   line-height: 1.82;
+  width: 100%;
 }
 .chatbot-window.inline-mode .user-message .message-text {
   background: var(--color-primary);
@@ -1845,14 +1846,33 @@ defineExpose({ ask, open, close, currentQuestion });
 
 /* Message Content Formatting */
 .message-text :deep(.code-block) {
-  color: #f8f8f2;
-  padding: 1rem;
-  border-radius: 8px;
-  margin: 0.5rem 0;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, rgba(248, 250, 255, 0.96) 0%, rgba(241, 245, 249, 0.94) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+  color: #1f2937;
+  padding: 16px 18px;
+  border-radius: 14px;
+  margin: 0.75rem 0;
   overflow-x: auto;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 0.875rem;
-  line-height: 1.4;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.message-text :deep(.code-block code) {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  margin: 0;
+  line-height: inherit;
+  font-size: inherit;
+  overflow-wrap: anywhere;
 }
 
 .message-text :deep(.inline-code) {
@@ -1877,6 +1897,13 @@ defineExpose({ ask, open, close, currentQuestion });
   .message-text :deep(.inline-code) {
     background: rgba(102, 126, 234, 0.2);
     color: #8fa6ff;
+  }
+
+  .message-text :deep(.code-block) {
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.92) 0%, rgba(15, 23, 42, 0.88) 100%);
+    border-color: rgba(99, 102, 241, 0.35);
+    box-shadow: 0 22px 40px rgba(2, 6, 23, 0.55);
+    color: #e2e8f0;
   }
 }
 

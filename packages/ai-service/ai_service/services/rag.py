@@ -218,21 +218,41 @@ class RAGPipeline:
             # Skip metadata pre-filtering for now; handle uniformly in post-filter stage
             metadata_filter = None
 
-            # Execute semantic search
-            results = await vector_store.search_similar(
+            # Execute semantic search and gather a candidate pool
+            combined_results: List[Tuple[DocumentChunk, float]] = await vector_store.search_similar(
                 query=query,
                 similarity_threshold=similarity_threshold,
                 metadata_filter=metadata_filter,
             )
 
-            # Apply post-filtering and score boosting based on query intent
-            filtered_results = self._post_filter_results(results, query_intent)
+            filtered_results = self._post_filter_results(
+                combined_results,
+                query_intent=query_intent,
+                max_results=max_results,
+            )
+
+            if len(filtered_results) < max_results:
+                for variant in self._expand_query_variants(query, query_intent):
+                    variant_results = await vector_store.search_similar(
+                        query=variant,
+                        similarity_threshold=similarity_threshold,
+                        metadata_filter=metadata_filter,
+                    )
+                    combined_results.extend(variant_results)
+                    filtered_results = self._post_filter_results(
+                        combined_results,
+                        query_intent=query_intent,
+                        max_results=max_results,
+                        prefer_diverse=True,
+                    )
+                    if len(filtered_results) >= max_results:
+                        break
 
             # only return up to max_results
             final_results = filtered_results[:max_results]
 
             logger.info(
-                f"Query intent: {query_intent}, Retrieved {len(final_results)}/{len(results)} relevant chunks"
+                f"Query intent: {query_intent}, Retrieved {len(final_results)}/{len(combined_results)} relevant chunks"
             )
             return final_results
 
@@ -464,38 +484,106 @@ Relevance: {score:.2f}
     def _post_filter_results(
         self,
         results: List[Tuple[DocumentChunk, float]],
+        *,
         query_intent: str,
+        max_results: int,
+        prefer_diverse: bool = False,
     ) -> List[Tuple[DocumentChunk, float]]:
-        """Apply a second-pass filter and boost scores according to query intent.
-
-        Args:
-            results: Raw similarity results from the vector store
-            query_intent: Intent classification for the query
-
-        Returns:
-            Re-scored and filtered results sorted by adjusted similarity score (desc).
-        """
+        """Apply a second-pass filter and boost scores according to query intent."""
 
         if not results:
             return results
 
-        filtered_results = []
+        def is_release_doc(chunk: DocumentChunk) -> bool:
+            doc_path = chunk.document_path.lower()
+            try:
+                rel_path = chunk.relative_path.lower()
+            except Exception:
+                rel_path = doc_path
+            signature = f"{doc_path} {rel_path}"
+            title_lower = chunk.title.lower()
+            return (
+                "05-version" in signature
+                or "announcing" in signature
+                or " release" in title_lower
+                or "发布" in title_lower
+            )
+
+        candidate_map: Dict[str, Dict[str, Any]] = {}
+        qualifying_map: Dict[str, Dict[str, Any]] = {}
 
         for chunk, score in results:
-            # Adjust relevance score based on how well the chunk matches the intent
             relevance_boost = self._calculate_intent_relevance_boost(
                 chunk, query_intent
             )
             adjusted_score = min(score + relevance_boost, 1.0)
 
-            # 基于调整后的分数重新过滤
+            entry = {
+                "chunk": chunk,
+                "score": score,
+                "adjusted": adjusted_score,
+                "is_release": is_release_doc(chunk),
+            }
+
+            doc_key = chunk.document_path
+            existing = candidate_map.get(doc_key)
+            if existing is None or adjusted_score > existing["adjusted"]:
+                candidate_map[doc_key] = entry
+
             if adjusted_score >= settings.similarity_threshold:
-                filtered_results.append((chunk, adjusted_score))
+                existing_qual = qualifying_map.get(doc_key)
+                if existing_qual is None or adjusted_score > existing_qual["adjusted"]:
+                    qualifying_map[doc_key] = entry
 
-        # 按调整后的分数重新排序
-        filtered_results.sort(key=lambda x: x[1], reverse=True)
+        prioritized_entries = list(qualifying_map.values()) or list(candidate_map.values())
 
-        return filtered_results
+        if query_intent != "version_release":
+            non_release = [entry for entry in prioritized_entries if not entry["is_release"]]
+            if non_release:
+                prioritized_entries = non_release
+            elif prefer_diverse:
+                pool_non_release = [entry for entry in candidate_map.values() if not entry["is_release"]]
+                if pool_non_release:
+                    prioritized_entries = pool_non_release
+
+        prioritized_entries.sort(
+            key=lambda entry: (entry["adjusted"], entry["score"]), reverse=True
+        )
+
+        trimmed = prioritized_entries[:max_results]
+
+        return [
+            (entry["chunk"], max(entry["adjusted"], 0.0))
+            for entry in trimmed
+        ]
+
+    def _expand_query_variants(self, query: str, query_intent: str) -> List[str]:
+        """Produce intent-aware alternative queries to improve recall."""
+
+        normalized = query.lower()
+        variants: List[str] = []
+
+        if query_intent == "configuration":
+            if "代理" in query or "proxy" in normalized:
+                variants.extend(
+                    [
+                        "configure vite proxy",
+                        "vite server proxy configuration",
+                        "vite dev server proxy setup",
+                    ]
+                )
+            else:
+                variants.append("vite configuration guide")
+
+        seen = {normalized}
+        unique_variants: List[str] = []
+        for variant in variants:
+            lower = variant.lower()
+            if lower not in seen:
+                unique_variants.append(variant)
+                seen.add(lower)
+
+        return unique_variants
 
     def _calculate_intent_relevance_boost(
         self, chunk: DocumentChunk, query_intent: str
@@ -510,40 +598,52 @@ Relevance: {score:.2f}
 
         boost = 0.0
 
-        # 文档路径匹配加分
         doc_path = chunk.document_path.lower()
+        try:
+            relative_path = chunk.relative_path.lower()
+        except Exception:
+            relative_path = ""
+        path_signature = f"{doc_path} {relative_path}"
+
         title_lower = chunk.title.lower()
+        heading_lower = (chunk.heading or "").lower()
+        content_lower = chunk.content.lower()
+
+        release_signal = (
+            "05-version" in path_signature
+            or "announcing" in path_signature
+            or " release" in title_lower
+            or "发布" in title_lower
+        )
 
         if query_intent == "configuration":
             if (
-                "03-configuration" in doc_path
+                "03-configuration" in path_signature
                 or "config" in title_lower
                 or "配置" in title_lower
             ):
-                boost += 0.2
-            # 如果查询配置但匹配到版本发布文档，大幅降分
-            if "05-version" in doc_path and "announcing" in doc_path:
-                boost -= 0.3
+                boost += 0.28
+            if any(keyword in heading_lower for keyword in ["proxy", "config", "server"]):
+                boost += 0.12
+            if "guide" in path_signature and any(
+                token in path_signature for token in ["config", "proxy", "server"]
+            ):
+                boost += 0.08
+            if release_signal:
+                boost -= 0.55
 
         elif query_intent == "comparison":
-            # 比较类问题优先基础与核心概念文档
-            if "01-getting-started" in doc_path or "02-core-concepts" in doc_path:
+            if "01-getting-started" in path_signature or "02-core-concepts" in path_signature:
                 boost += 0.25
-            # 强烈惩罚版本发布/公告类文档
-            if "05-version" in doc_path or "announcing" in doc_path:
+            if release_signal:
                 boost -= 0.4
 
-            # 内容关键词微调：对比/差异相关字样小幅加分
             comparison_terms = ["对比", "比较", "差异", "区别", "difference", "vs", "versus"]
-            content_lower = chunk.content.lower()
             matches = sum(
-                1
-                for term in comparison_terms
-                if term in content_lower or term in title_lower
+                1 for term in comparison_terms if term in content_lower or term in title_lower
             )
             boost += min(matches * 0.05, 0.1)
 
-            # 发布/变更类词汇小幅降分
             release_terms = [
                 "release",
                 "released",
@@ -554,32 +654,31 @@ Relevance: {score:.2f}
                 "发布",
             ]
             penalties = sum(
-                1
-                for term in release_terms
-                if term in content_lower or term in title_lower
+                1 for term in release_terms if term in content_lower or term in title_lower
             )
             boost -= min(penalties * 0.05, 0.15)
 
         elif query_intent == "version_release":
-            if "05-version" in doc_path:
-                boost += 0.2
-            # 版本查询匹配到配置文档，适度降分
-            if "03-configuration" in doc_path:
+            if "05-version" in path_signature:
+                boost += 0.25
+            if "03-configuration" in path_signature:
                 boost -= 0.1
 
         elif query_intent == "concept_learning":
-            if "01-getting-started" in doc_path or "02-core-concepts" in doc_path:
+            if "01-getting-started" in path_signature or "02-core-concepts" in path_signature:
                 boost += 0.2
-            # 概念类问题避免版本公告
-            if "05-version" in doc_path or "announcing" in doc_path:
-                boost -= 0.2
+            if release_signal:
+                boost -= 0.25
 
         elif query_intent == "performance":
-            if "04-seo-performance" in doc_path:
+            if "04-seo-performance" in path_signature:
                 boost += 0.2
+            if release_signal:
+                boost -= 0.2
 
-        # 内容关键词匹配加分
-        content_lower = chunk.content.lower()
+        if query_intent not in {"version_release"} and release_signal:
+            boost -= 0.2
+
         if query_intent == "configuration":
             config_content_keywords = [
                 "vite.config",
@@ -587,11 +686,13 @@ Relevance: {score:.2f}
                 "plugins",
                 "alias",
                 "proxy",
+                "server.proxy",
+                "https",
             ]
             matches = sum(
                 1 for keyword in config_content_keywords if keyword in content_lower
             )
-            boost += matches * 0.05
+            boost += min(matches * 0.06, 0.18)
 
         return boost
 
