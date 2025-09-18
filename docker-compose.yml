@@ -1,66 +1,47 @@
-# /docker-compose.yml (Universal version)
-version: "3.9"
-
 services:
-  # AI Service (Refactored)
   ai-service:
-    image: vitepress-lite-ai-dev
     build:
       context: ./packages/ai-service
       dockerfile: Dockerfile
+    env_file:
+      - ./packages/ai-service/.env
     environment:
-      - ENVIRONMENT=development
-      - PYTHONUNBUFFERED=1
-      - HOST=0.0.0.0
-      - DOCS_PATH=/app/docs
+      HOST: 0.0.0.0
+      PORT: 8000
+      DOCS_PATH: /app/docs
+      CHROMADB_PATH: /app/data/chroma_db
+      CONVERSATION_DB_PATH: /app/data/conversations.sqlite3
     volumes:
-      - ./packages/ai-service:/app
-      - ./docs:/app/docs
+      - ./docs:/app/docs:ro
       - ai_data:/app/data
     ports:
       - "8000:8000"
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 5
 
-  # API 服务 (已修正)
-  api-server:
-    image: vitepress-lite-api-dev
-    build:
-      context: .
-      dockerfile: packages/api-server/Dockerfile.dev
-    environment:
-      - NODE_ENV=development
-      - PORT=3001
-      - SWAGGER_ENABLED=true
-      - DATABASE_URL=file:./prisma/dev.db
-    volumes:
-      - ./packages/api-server:/workspace/packages/api-server
-      - ./docs:/workspace/docs
-    working_dir: /workspace/packages/api-server
-    command: >
-      sh -c "pnpm install && pnpm db:generate && pnpm db:migrate && pnpm db:sync && pnpm db:seed && pnpm dev"
-    ports:
-      - "3001:3001"
-
-  # 前端文档站点 (已修正)
   docs-site:
-    image: vitepress-lite-docs-dev
     build:
       context: .
-      dockerfile: packages/docs-site/Dockerfile.dev
+      dockerfile: packages/docs-site/Dockerfile
+      args:
+        VITE_API_BASE_URL: /api
+    depends_on:
+      ai-service:
+        condition: service_healthy
     environment:
-      - NODE_ENV=development
-      - VITE_API_BASE_URL=/api
-    volumes:
-      - ./packages/docs-site:/workspace/packages/docs-site
-      - ./docs:/workspace/docs
-    working_dir: /workspace/packages/docs-site
-    command: sh -c "pnpm install && pnpm run dev:docker"
+      VITE_API_BASE_URL: /api
     ports:
-      - "5173:5173"
+      - "4173:4173"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:4173/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
 volumes:
   ai_data:

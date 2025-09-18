@@ -6,11 +6,13 @@
     "dev": "pnpm --parallel --filter \"./packages/**\" dev",
     "dev:docs": "pnpm --filter docs-site dev",
     "dev:api": "pnpm --filter api-server dev",
-    "dev:ai": "cd packages/ai-service && poetry run python -m ai_service serve",
+    "dev:ai": "cd packages/ai-service && poetry run ai-service serve --host 0.0.0.0 --port 8000",
+    "dev:local": "concurrently -k -n docs,ai \"pnpm dev:docs\" \"pnpm dev:ai\"",
     "build": "pnpm --filter \"./packages/**\" build",
-    "ai:migrate": "cd packages/ai-service && poetry run python -m ai_service migrate",
-    "ai:ingest": "cd packages/ai-service && poetry run python -m ai_service ingest",
-    "ai:ingest-clear": "cd packages/ai-service && poetry run python -m ai_service ingest --clear",
+    "ai:migrate": "cd packages/ai-service && poetry run ai-service migrate",
+    "ai:ingest": "cd packages/ai-service && poetry run ai-service ingest",
+    "ai:ingest-clear": "cd packages/ai-service && poetry run ai-service ingest --clear",
+    "ai:bootstrap": "pnpm ai:migrate && pnpm ai:ingest",
     "ai:test": "cd packages/ai-service && python scripts/test_service.py",
     "build:docs": "pnpm --filter docs-site build",
     "build:api": "pnpm --filter api-server build",
@@ -34,13 +36,13 @@
     "type-check": "pnpm --parallel --filter \"./packages/**\" run type-check",
     "deps:update": "pnpm update -r",
     "deps:outdated": "pnpm outdated -r",
-    "docker:build": "docker-compose build",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "docker:logs": "docker-compose logs -f",
-    "docker:restart": "docker-compose restart",
-    "docker:ps": "docker-compose ps",
-    "docker:clean": "docker-compose down -v && docker system prune -f",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:restart": "docker compose restart",
+    "docker:ps": "docker compose ps",
+    "docker:clean": "docker compose down -v && docker system prune -f",
     "docker:health": "bash scripts/docker-health-check.sh"
   },
   "devDependencies": {
@@ -55,7 +57,5 @@
     "pnpm": ">=8.0.0"
   },
   "packageManager": "pnpm@8.15.0",
-  "dependencies": {
-    "pnpm": "^10.16.1"
-  }
+  "dependencies": {}
 }

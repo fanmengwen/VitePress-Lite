@@ -104,7 +104,10 @@ class SettingsModule:
         self.similarity_threshold = get_float("SIMILARITY_THRESHOLD", 0.7)
         
         # API Configuration
-        self.cors_origins = get_list("CORS_ORIGINS", ["http://localhost:5173", "http://localhost:3001"])
+        self.cors_origins = get_list(
+            "CORS_ORIGINS",
+            ["http://localhost:5173", "http://localhost:4173", "http://localhost:3001"],
+        )
         
         # Security
         self.api_key_header = get_str("API_KEY_HEADER", "X-API-Key")

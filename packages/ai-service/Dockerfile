@@ -9,11 +9,9 @@ ENV PYTHONUNBUFFERED=1 \
     POETRY_NO_INTERACTION=1 \
     POETRY_VIRTUALENVS_CREATE=false
 
-# Install system dependencies
+# Install system dependencies required for Poetry and runtime tooling
 RUN apt-get update && apt-get install -y \
-    build-essential \
     curl \
-    --fix-missing \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
@@ -37,6 +35,7 @@ ENV PYTHONUNBUFFERED=1 \
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     curl \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -52,8 +51,11 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
 COPY ai_service/ ./ai_service/
-COPY scripts/ ./scripts/
+COPY migration/ ./migration/
 COPY entrypoint.sh ./entrypoint.sh
+
+# Ensure entrypoint is executable
+RUN chmod +x /app/entrypoint.sh
 
 # Create required directories and set permissions
 RUN mkdir -p ./data/chroma_db ./logs \

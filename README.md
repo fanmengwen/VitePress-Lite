@@ -1,163 +1,147 @@
 # VitePress-Lite
 
-> 基于 Vue 3 + Vite 的现代化文档平台，提供 Express API 与 AI（RAG）问答服务
+> 轻量级的文档体验平台：Vite + Vue 3 前端、可选的 Express API、以及基于 FastAPI + ChromaDB 的 RAG AI 助手。
 
-## 线上地址
-
-[线上预览](https://fanmengwen.com)
-
-## 🎯 项目概述
-
-VitePress-Lite 采用“**文件为源，数据库为本**”的混合架构：
-
-- 自定义 Vite 插件将 Markdown 实时转换为 Vue 组件
-- API Server 管理用户与内容（Prisma）
-- AI Service 基于 RAG 为文档提供智能问答
-
-## 🏗️ 目录结构（Monorepo）
+## 🧭 Monorepo 结构
 
 ```
 VitePress-Lite/
-├── docs/                       # Markdown 源文件（系统真源）
+├── docs/                         # Markdown 原始文档（知识库）
 ├── packages/
-│   ├── docs-site/              # 🎨 前端文档站点（Vite + Vue 3）
-│   │   ├── plugins/            # 自定义 Vite 插件（MD → Vue SFC, 虚拟路由）
-│   │   └── src/                # Vue 应用源码
-│   └── api-server/             # 🛠️ 后端 API（Express + Prisma）
-│       ├── prisma/             # Prisma schema / 迁移 / 同步脚本
-│       └── src/                # 应用代码
-└── packages/ai-service/        # 🤖 AI（FastAPI + ChromaDB + LLM）
+│   ├── docs-site/                # 前端站点（Vite + Vue 3 + 自定义插件）
+│   ├── api-server/               # （可选）Express + Prisma API
+│   └── ai-service/               # FastAPI + RAG AI 服务
+└── docker-compose.yml            # 一键启动文档站点 + AI 服务
 ```
 
-## 🚀 技术栈
+> **提示**：目前主要使用 docs-site 与 ai-service；`api-server` 仍保留，但默认不会在 Docker 方案中启动。
 
-- **前端**：Vue 3 + TypeScript + Vite + 自定义插件
-- **后端**：Node.js + Express + Prisma（SQLite 默认 / PostgreSQL 可选）
-- **AI**：FastAPI + ChromaDB + Sentence-Transformers + OpenAI/通义/DeepSeek
-- **工程化**：pnpm workspace + 并行构建 + 开发代理 + Docker（可选）
+## ⚙️ 环境要求
 
-## ⚡ 快速开始（开发）
-
-### 1) 环境准备
-
-- Node.js >= 18
+### 必需
+- Node.js >= 18.12
 - pnpm >= 8
-- Python 3.10+（用于 AI 服务）
+- Python 3.10+
+- [Poetry](https://python-poetry.org/)（用于 AI 服务依赖管理）
 
-### 2) 安装依赖
+### 可选
+- Docker & Docker Compose（用于一键容器化）
 
-```bash
-pnpm install
-```
+## 🚀 本地开发（手动）
 
-### 3) 配置环境变量
+1. **安装依赖**
+   ```bash
+   pnpm install
+   ```
 
-- API Server：复制 `packages/api-server/env.example` 为 `.env`（默认 SQLite 即可）
-  - PostgreSQL（可选）：使用 `db:postgresql:*` 脚本
-- AI Service：在 `packages/ai-service` 下创建 `.env`（至少设置 LLM 提供商与 API Key）
-  - 关键变量：`LLM_PROVIDER`、`OPENAI_API_KEY` 或对应提供商的 Key
+2. **配置 AI 服务环境**
+   ```bash
+   cp packages/ai-service/.env packages/ai-service/.env.local  # 可选
+   # 编辑 packages/ai-service/.env，至少设置：
+   # LLM_PROVIDER=openai | aliyun | deepseek
+   # API_KEY=...（对应厂商的 Key）
+   ```
 
-### 4) 初始化数据库并同步文档
+3. **初始化会话数据库 + 构建向量索引**
+   ```bash
+   pnpm ai:bootstrap         # 等价于 pnpm ai:migrate && pnpm ai:ingest
+   ```
 
-```bash
-# 生成 Prisma Client
-pnpm --filter api-server db:generate
+4. **启动文档站点 + AI 服务（同一终端自动并行）**
+   ```bash
+   pnpm dev:local            # 同时运行 pnpm dev:docs 与 pnpm dev:ai
+   ```
+   - 文档站点：http://localhost:5173
+   - AI 服务：http://localhost:8000（/health, /api/chat, /api/vector-search）
 
-# 迁移数据库（SQLite 默认）
-pnpm --filter api-server db:migrate
+5. **（可选）启动传统 API Server**
+   ```bash
+   pnpm dev:api
+   ```
+   默认不会被 docs-site 使用，可视业务需要决定是否开启。
 
-# 同步 docs/ Markdown → 数据库
-pnpm --filter api-server db:sync
+6. **常用脚本速查**
+   ```bash
+   pnpm ai:migrate         # 仅执行会话数据库迁移
+   pnpm ai:ingest          # 增量更新向量索引
+   pnpm ai:ingest-clear    # 清空后重建索引
+   pnpm dev:docs           # 仅运行文档站点
+   pnpm dev:ai             # 仅运行 AI 服务（uvicorn）
+   ```
 
-# 播种示例数据（可选）
-pnpm --filter api-server db:seed
-```
+> 更新 `docs/` 下文档后，记得运行 `pnpm ai:ingest` 以刷新向量数据库。
 
-### 5) 启动服务
+## 🐳 Docker 一键体验
 
-打开两个终端：
+1. **准备 AI 配置**
+   - 编辑 `packages/ai-service/.env`，填好 LLM Provider 与 API Key。
+   - 默认会将宿主机 `./docs` 挂载到容器内 `/app/docs`，并将向量库保存在 `ai_data` 卷下。
 
-```bash
-# 终端 A：前端 + API（并行）
-pnpm dev
+2. **构建镜像**
+   ```bash
+   docker compose build
+   ```
 
-# 终端 B：AI 服务（优化启动）
-pnpm dev:ai            # 等同于：cd packages/ai-service && python start_optimized.py
-```
+3. **启动服务**
+   ```bash
+   docker compose up -d
+   ```
 
-访问：
+   - 文档站点：http://localhost:4173
+   - AI 服务：http://localhost:8000（直接暴露，方便调试）
 
-- 📖 文档站点：http://localhost:5173
-- 🔌 API 服务：http://localhost:3001（Swagger：/api-docs）
-- 🤖 AI 服务：http://localhost:8000（/health, /system-info, /api/chat）
+4. **功能自检**
+   ```bash
+   # 向量检索
+   curl -s -X POST http://localhost:4173/api/vector-search \
+     -H 'Content-Type: application/json' \
+     -d '{"query":"vite 是什么？"}'
 
-### 一键准备（基于当前代码）
+   # 对话接口
+   curl -s -X POST http://localhost:4173/api/chat \
+     -H 'Content-Type: application/json' \
+     -d '{"question":"vite 是什么？"}'
 
-```bash
-pnpm install && \
-pnpm --filter api-server db:generate && \
-pnpm --filter api-server db:migrate && \
-pnpm --filter api-server db:sync && \
-pnpm --filter api-server db:seed && \
-pnpm --filter docs-site build && \
-python3 packages/ai-service/start_optimized.py
-```
+   # 查看运行状态
+   docker compose ps
+   docker compose logs -f ai-service
+   docker compose logs -f docs-site
+   ```
 
-提示：如果你使用 PostgreSQL，请将 `db:migrate` 替换为 `--filter api-server db:postgresql:migrate`。
+5. **关闭并清理**
+   ```bash
+   docker compose down            # 停止容器
+   docker compose down -v         # 若需删除卷（会清空向量索引/会话数据库）
+   ```
 
-## 🔄 日常更新流程
+> AI 服务容器在启动时会自动执行 `migrate` 与 `ingest`，确保知识库与会话存储状态一致。
 
-- **更新 Markdown 文档**（`docs/`）
-  - API 数据同步：`pnpm db:sync`
-  - AI 向量索引：`pnpm ai:ingest`（或 `pnpm ai:ingest-clear` 全量重建）
-- **更新前端代码**：HMR 实时生效（`pnpm dev`）
-- **更新后端代码**：`pnpm dev:api`（tsx watch）自动重启
-- **检查 AI 服务健康**：`curl http://localhost:8000/health`
+## 📜 常用 npm/pnpm 脚本索引
 
-## 🔌 本地端口与代理
+| 脚本                      | 说明 |
+| ------------------------- | ---- |
+| `pnpm dev:local`          | 同时启动文档站点与 AI 服务（推荐） |
+| `pnpm dev:docs`           | 仅启动前端文档站点 |
+| `pnpm dev:ai`             | 仅启动 AI 服务（Poetry + uvicorn） |
+| `pnpm ai:bootstrap`       | 会话数据库迁移 + 增量向量索引 |
+| `pnpm ai:ingest[-clear]`  | 更新或重建向量索引 |
+| `pnpm docker:build`       | `docker compose build` 快捷命令 |
+| `pnpm docker:up`          | `docker compose up -d` 快捷命令 |
+| `pnpm docker:down`        | `docker compose down` 快捷命令 |
 
-- 前端 Dev 服务器（5173）代理规则（见 `packages/docs-site/vite.config.ts`）：
-  - `/api/chat`、`/api/vector-store`、`/health`、`/system-info` → `http://localhost:8000`（AI）
-  - 其他 `/api/*` → `http://localhost:3001`（API Server）
+## 🔁 内容与数据更新流程
 
-## 📜 常用脚本（根目录）
+1. 修改 `docs/` 下的 Markdown。
+2. 运行 `pnpm ai:ingest` 刷新知识库。
+3. 若在 Docker 中运行，可执行 `docker compose up -d --build` 重新构建镜像。
 
-```bash
-# 开发
-pnpm dev              # 并行启动前端与 API（不含 AI）
-pnpm dev:docs         # 仅前端
-pnpm dev:api          # 仅 API
-pnpm dev:ai           # 仅 AI（优化启动）
+## 🤝 贡献
 
-# 构建 / 预览
-pnpm build            # 构建所有包
-pnpm build:docs       # 构建前端
-pnpm build:api        # 构建 API
-pnpm preview          # 预览前端构建
+欢迎通过 Issue / PR 反馈问题或贡献功能。建议在提交前：
+- 确保通过 `pnpm ai:ingest` 更新索引；
+- 在本地使用 `pnpm dev:local` 验证；
+- 如涉及容器化流程，使用 `docker compose build && docker compose up -d` 验证。
 
-# 数据库
-pnpm db:generate
-pnpm db:migrate
-pnpm db:sync
-pnpm db:seed
-pnpm db:studio
-
-# AI 向量索引
-pnpm ai:ingest        # 处理/索引 docs/
-pnpm ai:ingest-clear  # 清空后重建
-```
-
-## 📚 深入了解
-
-- 前端实现详解：`packages/docs-site/README.md`
-- 后端 API 指南：`packages/api-server/README.md`
-- AI 服务说明：`packages/ai-service/README.md`
-
-## 🚢 生产部署
-
-- 参见 `PRODUCTION_DEPLOYMENT.md`、`DOCKER_GUIDE.md` 与根目录 `docker-compose*.yml`
-- 快速预览生产构建：`pnpm start:production`
-
-## 许可证
+## 📄 许可证
 
 MIT License

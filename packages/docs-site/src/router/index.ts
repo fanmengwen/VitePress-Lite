@@ -1,6 +1,5 @@
 // src/router/index.js
 
-// @ts-expect-error Temporary: type resolver in monorepo lints cannot locate vue-router types
 import { createRouter, createWebHistory } from "vue-router";
 
 import generatedRoutes from "virtual:pages";
