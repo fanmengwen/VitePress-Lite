@@ -93,34 +93,74 @@
               'ai-message': message.role === 'assistant' 
             }"
           >
-            <!-- Simple source cards shown UNDER the answer (no header, no similarity) -->
-            <div 
-                v-if="message.role === 'assistant' && message.sources && message.sources.length > 0" 
-                class="answer-sources"
-              >
-                <div class="answer-sources-grid">
-                  <div 
-                    v-for="(source, index) in message.sources" 
-                    :key="source.file_path + source.chunk_index"
-                    class="answer-source-card"
-                    @click="navigateToSource(source)"
-                    :title="`点击跳转到：${source.title}`"
-                  >
-                    <div class="answer-source-header">
-                      <div class="answer-source-favicon">📄</div>
-                      <div class="answer-source-domain">{{ (source.file_path || '').split('/')[0] || '文档' }}</div>
+            <div class="message-content">
+              <template v-if="message.role === 'assistant'">
+                <div 
+                  v-if="message.sources && message.sources.length > 0 && showSources"
+                  class="answer-sources"
+                >
+                  <div class="answer-sources-grid">
+                    <div 
+                      v-for="(source, index) in message.sources" 
+                      :key="source.file_path + source.chunk_index"
+                      class="answer-source-card"
+                      @click="navigateToSource(source)"
+                      :title="`点击跳转到：${source.title}`"
+                    >
+                      <div class="answer-source-index">{{ index + 1 }}</div>
+                      <div class="answer-source-body">
+                        <div class="answer-source-domain">{{ (source.file_path || '').split('/')[0] || '文档' }}</div>
+                        <div class="answer-source-desc">{{ source.title }}</div>
+                      </div>
                     </div>
-                    <div class="answer-source-desc">{{ source.title }}</div>
+                  </div>
+                </div>
+              </template>
+              <div class="message-text" v-html="formatMessage(message.content)"></div>
+            </div>
+          </div>
+
+          <!-- Retrieval status & preview -->
+          <transition name="fade-slide">
+            <div 
+              v-if="isLoading && showRetrievalBanner && (progress.stage === 'retrieve' || progress.stage === 'generate')"
+              class="retrieval-status"
+            >
+              <div class="retrieval-banner">
+                <span class="retrieval-glow"></span>
+                <span class="retrieval-text">
+                  {{ progress.stage === 'retrieve' ? '已检索到相关文档，正在分析内容…' : 'AI 正在整理回答，请稍候…' }}
+                </span>
+              </div>
+              <div v-if="showSources" class="retrieval-sources">
+                <div 
+                  v-if="retrievalPreviewSources.length > 0"
+                  class="retrieval-sources-grid"
+                >
+                  <div 
+                    v-for="(source, index) in retrievalPreviewSources" 
+                    :key="`retrieval-${source.file_path}-${source.chunk_index}`"
+                    class="retrieval-source-card"
+                  >
+                    <div class="retrieval-source-badge">{{ index + 1 }}</div>
+                    <div class="retrieval-source-meta">
+                      <div class="retrieval-source-domain">{{ (source.file_path || '').split('/')[0] || '文档' }}</div>
+                      <div class="retrieval-source-title" :title="source.title">{{ source.title }}</div>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="retrieval-sources-grid skeleton">
+                  <div class="retrieval-source-card skeleton-card" v-for="n in 3" :key="`skeleton-${n}`">
+                    <div class="retrieval-source-badge shimmering"></div>
+                    <div class="retrieval-source-meta">
+                      <div class="shimmer-line short"></div>
+                      <div class="shimmer-line"></div>
+                    </div>
                   </div>
                 </div>
               </div>
-            <div class="message-content">
-              <!-- Answer text (no border/background) -->
-              <div class="message-text" v-html="formatMessage(message.content)"></div>
-
-             <div class="message-line" v-show="message.role === 'assistant'"></div>
             </div>
-          </div>
+          </transition>
 
           <!-- Loading Message -->
           <div v-if="isLoading" class="message ai-message loading-message">
@@ -229,6 +269,8 @@ const showSources = ref(true);
 const lastQuestion = ref('');
 const currentQuestion = ref('');
 const progress = ref<{ stage: 'retrieve' | 'generate' | 'done' | '' }>({ stage: '' });
+const retrievalPreviewSources = ref<SourceReference[]>([]);
+const showRetrievalBanner = ref(false);
 const currentConversationId = ref<string | null>(props.conversationId ?? null);
 const historyLoading = ref(false);
 const historyError = ref('');
@@ -320,6 +362,8 @@ const resetConversationState = () => {
   messages.value = [];
   historyError.value = '';
   progress.value.stage = '';
+  retrievalPreviewSources.value = [];
+  showRetrievalBanner.value = false;
   hasRenamedCurrentConversation.value = false;
   currentQuestion.value = '';
   lastQuestion.value = '';
@@ -511,16 +555,9 @@ const sendMessage = async () => {
       timestamp: msg.timestamp,
     }));
 
-    // Show a staged system message to indicate progress
-    if (retrievedSources.length > 0 && showSources.value) {
-      messages.value.push({
-        role: 'assistant',
-        content: '已根据知识库检索到相关文档，正在整理回答...',
-        timestamp: new Date().toISOString(),
-        sources: retrievedSources,
-      } as any);
-      await scrollToBottom();
-    }
+    // Present a retrieval banner instead of inserting a staged message
+    showRetrievalBanner.value = true;
+    retrievalPreviewSources.value = showSources.value ? retrievedSources : [];
 
     progress.value.stage = 'generate';
     // 2) call AI to generate the final answer
@@ -536,14 +573,6 @@ const sendMessage = async () => {
     const mergedSources = (response.sources && response.sources.length > 0)
       ? response.sources
       : retrievedSources;
-
-    // Replace the staged system message if it exists
-    const stagedIndex = messages.value.findIndex(
-      (m) => m.role === 'assistant' && m.content.includes('正在整理回答')
-    );
-    if (stagedIndex !== -1) {
-      messages.value.splice(stagedIndex, 1);
-    }
 
     // 3) push final AI message with sources
     const aiMessage = {
@@ -573,11 +602,19 @@ const sendMessage = async () => {
       progress.value.stage = 'done';
     }
 
+    retrievalPreviewSources.value = [];
+    showRetrievalBanner.value = false;
+
   } catch (error) {
     hasError.value = true;
     errorMessage.value = getAIErrorMessage(error);
     console.error('AI chat error:', error);
   } finally {
+    if (progress.value.stage !== 'done') {
+      progress.value.stage = '';
+    }
+    retrievalPreviewSources.value = [];
+    showRetrievalBanner.value = false;
     isLoading.value = false;
     await scrollToBottom();
     await nextTick();
@@ -984,13 +1021,14 @@ defineExpose({ ask, open, close, currentQuestion });
 
 .message {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 6px 0;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+  padding: 4px 0 28px;
 }
 
 .message.user-message {
-  flex-direction: row-reverse;
+  align-items: flex-end;
 }
 
 .message-avatar {
@@ -1012,47 +1050,34 @@ defineExpose({ ask, open, close, currentQuestion });
 }
 
 .message-content {
-  flex: 1;
-  width: 100%;
-  max-width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  align-items: flex-start;
+  gap: 16px;
+  width: 100%;
+  max-width: min(720px, 100%);
 }
 
 .message.user-message .message-content {
   align-items: flex-end;
 }
 
-/* Ensure AI answer body and sources stack vertically
-   and keep the answer body on top, sources below */
-.message.ai-message {
-  flex-direction: column;
-  align-items: stretch;
-}
-
 .message.ai-message .message-content {
-  order: 1;
-  width: 100%;
-  max-width: 100%;
-}
-
-.message.ai-message .answer-sources {
-  order: 2;
-  width: 100%;
+  align-items: flex-start;
 }
 
 .message-text {
-  background: #fff;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  padding: 12px 16px;
-  border-radius: 18px;
-  line-height: 1.62;
+  max-width: 100%;
   word-break: break-word;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
-  display: inline-block;
-  max-width: min(640px, 100%);
+  color: var(--color-text-primary, #0f172a);
+  font-size: 16px;
+  line-height: 1.78;
+}
+
+.message.ai-message .message-text {
+  background: transparent;
+  border: none;
+  padding: 0;
+  box-shadow: none;
 }
 
 .message.user-message .message-text {
@@ -1061,212 +1086,317 @@ defineExpose({ ask, open, close, currentQuestion });
   border: none;
   border-radius: 18px 4px 18px 18px;
   box-shadow: 0 12px 24px rgba(99, 102, 241, 0.35);
-  align-self: flex-end;
+  padding: 12px 16px;
+  max-width: clamp(200px, 60%, 420px);
+  text-align: left;
 }
 
 /* Inline mode message styling */
-.chatbot-window.inline-mode .message { margin: 16px 0; }
-.chatbot-window.inline-mode .message-content { max-width: 100%; }
-
+.chatbot-window.inline-mode .message { margin: 20px 0 32px; padding-bottom: 0; }
+.chatbot-window.inline-mode .message-content { max-width: 740px; }
 .chatbot-window.inline-mode .ai-message .message-text {
-  background: #ffffff;
-  color: var(--color-text-primary);
-  font-size: 15px;
-  line-height: 1.75;
-  padding: 12px 14px;
-  border-radius: 12px;
+  font-size: 17px;
+  line-height: 1.82;
 }
-
-.chatbot-window.inline-mode .user-message { justify-content: flex-end; }
 .chatbot-window.inline-mode .user-message .message-text {
   background: var(--color-primary);
   color: #fff;
-  border: none;
-  font-size: 15px;
-  line-height: 1.7;
-  padding: 10px 14px;
   border-radius: 24px 0 24px 24px;
-  width: fit-content;
-  margin: 4px 0;
+  padding: 12px 18px;
 }
-
-.chatbot-window.inline-mode .ai-message .message-text { background: transparent; padding: 0; font-size: 16px; line-height: 1.7; }
-
 .chatbot-window.inline-mode .message-avatar { display: none; }
-
-.chatbot-window.inline-mode .ai-message .message-content {align-self: flex-start; }
-
+.chatbot-window.inline-mode .ai-message .message-content { align-items: flex-start; }
 
 
-/* Perplexity-style Sources Layout */
-/* Deprecated old sources block kept for compatibility, not used now */
-.perplexity-sources { display: none; }
 
-.sources-header {
-  font-size: 14px !important;
-  font-weight: 600 !important;
-  color: #374151 !important;
-  margin: 0 0 12px 0 !important;
-}
-
-.sources-grid {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 12px;
-  margin-top: 10px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-}
-
-.source-card {
-  display: flex;
-  align-items: center;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 10px 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-  overflow: hidden;
-  flex: 0 0 auto;
-  height: 56px;
-  min-width: 220px;
-}
-
-.source-card:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.source-number {
-  background: #667eea;
-  color: white;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  margin-right: 10px;
-  flex-shrink: 0;
-}
-
-.source-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.source-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1e293b;
-  line-height: 1.25;
-  margin-bottom: 2px;
-  display: -webkit-box;
-  line-clamp: 1;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.source-score {
-  font-size: 10px;
-  color: #64748b;
-  font-weight: 500;
-}
-
+/* Answer sources */
 .answer-sources {
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .answer-sources-grid {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.answer-sources-grid::-webkit-scrollbar {
+  display: none;
 }
 
 .answer-source-card {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  background: linear-gradient(180deg, rgba(248, 250, 255, 0.95) 0%, rgba(241, 245, 249, 0.92) 100%);
-  border: 1px solid rgba(148, 163, 184, 0.25);
+  align-items: center;
+  gap: 12px;
+  background: rgba(248, 250, 255, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.35);
   border-radius: 14px;
   padding: 12px 16px;
-  width: clamp(180px, 30%, 240px);
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+  min-width: clamp(220px, 30%, 260px);
+  flex: 0 0 auto;
 }
 
 .answer-source-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(99, 102, 241, 0.4);
-  box-shadow: 0 18px 32px rgba(99, 102, 241, 0.18);
+  border-color: rgba(99, 102, 241, 0.6);
+  box-shadow: 0 20px 38px rgba(79, 70, 229, 0.18);
 }
-.answer-source-header { display: flex; align-items: center; gap: 10px; }
-.answer-source-favicon {
-  width: 22px;
-  height: 22px;
+
+.answer-source-index {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: rgba(79, 70, 229, 0.12);
+  color: #4f46e5;
+  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-  border-radius: 6px;
-  background: rgba(99, 102, 241, 0.12);
+  flex-shrink: 0;
+  font-size: 13px;
 }
+
+.answer-source-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
 .answer-source-domain {
   font-size: 11px;
   color: #64748b;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
 }
+
 .answer-source-desc {
   font-size: 14px;
   color: #0f172a;
   font-weight: 600;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Retrieval preview */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.25s ease;
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.retrieval-status {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 8px 0 28px;
+  width: 100%;
+}
+
+.retrieval-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.12) 0%, rgba(14, 165, 233, 0.08) 100%);
+  color: #334155;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+.retrieval-glow {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #4f46e5;
+  box-shadow: 0 0 0 6px rgba(79, 70, 229, 0.15);
+  animation: pulse-glow 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    transform: scale(0.85);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+}
+
+.retrieval-text {
+  position: relative;
+}
+
+.retrieval-sources {
+  width: 100%;
+}
+
+.retrieval-sources-grid {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.retrieval-sources-grid::-webkit-scrollbar {
+  display: none;
+}
+
+.retrieval-source-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(241, 245, 249, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  min-width: clamp(200px, 28%, 240px);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+  pointer-events: none;
+}
+
+.retrieval-source-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background: rgba(79, 70, 229, 0.12);
+  color: #4f46e5;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.retrieval-source-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.retrieval-source-domain {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #748096;
+  font-weight: 600;
+}
+
+.retrieval-source-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.32;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.message-line {
-  height: 1px;
-  background: linear-gradient(90deg, rgba(148, 163, 184, 0), rgba(148, 163, 184, 0.4), rgba(148, 163, 184, 0));
-  margin: 20px 0 28px;
+.retrieval-sources-grid.skeleton .retrieval-source-card {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(148, 163, 184, 0.18);
+  background: rgba(226, 232, 240, 0.65);
+}
+
+.shimmer-line,
+.retrieval-source-badge.shimmering {
+  background: linear-gradient(90deg, rgba(226, 232, 240, 0.2) 0%, rgba(148, 163, 184, 0.45) 50%, rgba(226, 232, 240, 0.2) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite;
+}
+
+.shimmer-line {
+  height: 10px;
+  border-radius: 999px;
+}
+
+.shimmer-line.short {
+  width: 90px;
+}
+
+.shimmer-line:not(.short) {
+  width: 150px;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 @media (prefers-color-scheme: dark) {
-  .message-text {
-    background: rgba(30, 41, 59, 0.85);
-    border-color: rgba(148, 163, 184, 0.2);
+  .message.ai-message .message-text {
     color: #e2e8f0;
   }
 
   .message.user-message .message-text {
     background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 100%);
-    box-shadow: 0 10px 22px rgba(124, 58, 237, 0.35);
+    box-shadow: 0 14px 32px rgba(76, 29, 149, 0.4);
   }
 
   .answer-source-card {
-    background: linear-gradient(180deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.92) 100%);
-    border-color: rgba(99, 102, 241, 0.2);
-    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.4);
-    color: #e2e8f0;
+    background: rgba(30, 41, 59, 0.75);
+    border-color: rgba(99, 102, 241, 0.35);
+    box-shadow: 0 16px 32px rgba(2, 6, 23, 0.45);
   }
 
   .answer-source-domain {
-    color: rgba(148, 163, 184, 0.85);
+    color: rgba(148, 163, 184, 0.8);
   }
 
   .answer-source-desc {
+    color: #f9fafb;
+  }
+
+  .retrieval-banner {
+    background: linear-gradient(135deg, rgba(89, 82, 200, 0.35) 0%, rgba(14, 116, 144, 0.28) 100%);
+    color: #e2e8f0;
+  }
+
+  .retrieval-source-card {
+    background: rgba(30, 41, 59, 0.72);
+    border-color: rgba(99, 102, 241, 0.28);
+    box-shadow: 0 16px 32px rgba(2, 6, 23, 0.55);
+  }
+
+  .retrieval-source-domain {
+    color: rgba(148, 163, 184, 0.75);
+  }
+
+  .retrieval-source-title {
     color: #f8fafc;
+  }
+
+  .shimmer-line,
+  .retrieval-source-badge.shimmering {
+    background: linear-gradient(90deg, rgba(30, 41, 59, 0.35) 0%, rgba(148, 163, 184, 0.45) 50%, rgba(30, 41, 59, 0.35) 100%);
   }
 }
 
@@ -1306,6 +1436,7 @@ defineExpose({ ask, open, close, currentQuestion });
 }
 
 /* Loading */
+
 .typing-indicator {
   display: flex;
   gap: 4px;
@@ -1316,7 +1447,7 @@ defineExpose({ ask, open, close, currentQuestion });
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #667eea;
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   animation: typing 1.4s infinite ease-in-out;
 }
 
@@ -1340,9 +1471,30 @@ defineExpose({ ask, open, close, currentQuestion });
 }
 
 .loading-text {
-  font-size: 0.875rem;
-  color: #666;
-  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.loading-message {
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 28px;
+}
+
+.loading-message .message-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  box-shadow: none;
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+}
+
+.loading-message .message-content {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
 }
 
 /* Error Message */
