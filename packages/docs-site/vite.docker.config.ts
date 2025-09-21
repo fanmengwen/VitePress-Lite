@@ -1,11 +1,11 @@
-import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import markdownItAnchor from "markdown-it-anchor";
 import path from "path";
+import { defineConfig } from "vite";
 import inspect from "vite-plugin-inspect";
 
-import virtualPagesPlugin from "./plugins/virtual-pages-plugin";
 import markdownTransformerPlugin from "./plugins/markdown-transformer-plugin";
+import virtualPagesPlugin from "./plugins/virtual-pages-plugin";
 
 // Vite config optimized for running inside Docker containers in development.
 // Key differences from vite.config.ts:
@@ -31,6 +31,7 @@ export default defineConfig({
     proxy: {
       // AI service endpoints
       "/api/chat": { target: "http://ai-service:8000", changeOrigin: true, secure: false },
+      "/api/vector-search": { target: "http://ai-service:8000", changeOrigin: true, secure: false },
       "/api/vector-store": {
         target: "http://ai-service:8000",
         changeOrigin: true,

@@ -4,11 +4,12 @@
     :class="{ 
       'expanded': isExpanded, 
       'loading': isLoading,
-      'error': hasError 
+      'error': hasError,
+      'inline-mode': inline
     }"
   >
     <!-- Compact State -->
-    <div v-if="!isExpanded" class="chatbot-compact" @click="expandChat">
+    <div v-if="!isExpanded && !hideCompact" class="chatbot-compact" @click="expandChat">
       <div class="compact-content">
         <div class="ai-icon">🤖</div>
         <div class="compact-text">
@@ -20,9 +21,9 @@
     </div>
 
     <!-- Expanded State -->
-    <div v-else class="chatbot-expanded">
-      <!-- Header -->
-      <div class="chat-header">
+    <div v-else class="chatbot-expanded" :style="inline ? { height: `${inlineHeight}px`, width: '100%' } : {}">
+      <!-- Header (hidden in inline/perplexity mode) -->
+      <div class="chat-header" v-if="!inline">
         <div class="header-info">
           <span class="ai-avatar">🤖</span>
           <div class="header-text">
@@ -41,88 +42,146 @@
         </button>
       </div>
 
-      <!-- Messages Container -->
+        <!-- Messages Container -->
       <div class="messages-container" ref="messagesContainer">
-        <!-- Welcome Message -->
-        <div v-if="messages.length === 0" class="welcome-message">
-          <div class="ai-message">
-            <div class="message-avatar">🤖</div>
-            <div class="message-content">
-              <p>👋 你好！我是 AI 文档助手，可以帮你回答关于 Vite 的问题。</p>
-              <div class="suggested-questions">
-                <h4>试试这些问题：</h4>
-                <button 
-                  v-for="question in suggestedQuestions" 
-                  :key="question"
-                  @click="askSuggestedQuestion(question)"
-                  class="suggested-question-btn"
-                >
-                  {{ question }}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Chat Messages -->
-        <div 
-          v-for="(message, index) in messages" 
-          :key="index"
-          class="message"
-          :class="{ 
-            'user-message': message.role === 'user', 
-            'ai-message': message.role === 'assistant' 
-          }"
+        <!-- Sticky question header (inline mode) -->
+        <!-- <div 
+          v-if="inline && (currentQuestion || lastQuestion)"
+          class="sticky-question-header"
         >
-          <div class="message-avatar">
-            {{ message.role === 'user' ? '👤' : '🤖' }}
+          <h2 class="question-title">{{ currentQuestion || lastQuestion }}</h2>
+        </div> -->
+        <div class="messages-inner">
+          <div v-if="historyLoading" class="conversation-status loading">
+            <div class="loading-spinner"></div>
+            <span>正在加载对话记录...</span>
           </div>
-          <div class="message-content">
-            <div class="message-text" v-html="formatMessage(message.content)"></div>
-            <div class="message-time">{{ formatTime(message.timestamp) }}</div>
-            
-            <!-- Sources for AI messages -->
-            <div v-if="message.sources && message.sources.length > 0" class="message-sources">
-              <h5>📚 参考资料：</h5>
-              <div class="sources-list">
-                <div 
-                  v-for="source in message.sources" 
-                  :key="source.file_path + source.chunk_index"
-                  class="source-item clickable"
-                  @click="navigateToSource(source)"
-                  :title="`点击跳转到：${source.title}`"
-                >
-                  <span class="source-title">
-                    <span class="source-icon">📄</span>
-                    {{ source.title }}
-                  </span>
-                  <span class="source-score">相似度: {{ Math.round(source.similarity_score * 100) }}%</span>
-                  <span class="source-link-icon">🔗</span>
+
+          <div v-else-if="historyError" class="conversation-status error">
+            <span>{{ historyError }}</span>
+            <button class="retry-btn" @click="reloadCurrentConversation">重试</button>
+          </div>
+
+          <!-- Welcome Message -->
+          <div v-else-if="messages.length === 0" class="welcome-message">
+            <div class="ai-message">
+              <div class="message-avatar">🤖</div>
+              <div class="message-content">
+                <p>👋 你好！我是 AI 文档助手，可以帮你回答关于 Vite 的问题。</p>
+                <div class="suggested-questions">
+                  <h4>试试这些问题：</h4>
+                  <button 
+                    v-for="question in suggestedQuestions" 
+                    :key="question"
+                    @click="askSuggestedQuestion(question)"
+                    class="suggested-question-btn"
+                  >
+                    {{ question }}
+                  </button>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Loading Message -->
-        <div v-if="isLoading" class="message ai-message loading-message">
-          <div class="message-avatar">🤖</div>
-          <div class="message-content">
-            <div class="typing-indicator">
-              <span></span>
-              <span></span>
-              <span></span>
+          <!-- Chat Messages -->
+          <div 
+            v-for="(message, index) in messages" 
+            :key="index"
+            class="message"
+            :class="{ 
+              'user-message': message.role === 'user', 
+              'ai-message': message.role === 'assistant' 
+            }"
+          >
+            <div class="message-content">
+              <template v-if="message.role === 'assistant'">
+                <div 
+                  v-if="message.sources && message.sources.length > 0 && showSources"
+                  class="answer-sources"
+                >
+                  <div class="answer-sources-grid">
+                    <div 
+                      v-for="(source, index) in message.sources" 
+                      :key="source.file_path + source.chunk_index"
+                      class="answer-source-card"
+                      @click="navigateToSource(source)"
+                      :title="`点击跳转到：${source.title}`"
+                    >
+                      <div class="answer-source-index">{{ index + 1 }}</div>
+                      <div class="answer-source-body">
+                        <div class="answer-source-domain">{{ (source.file_path || '').split('/')[0] || '文档' }}</div>
+                        <div class="answer-source-desc">{{ source.title }}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </template>
+              <div class="message-text" v-html="formatMessage(message.content)"></div>
             </div>
-            <div class="loading-text">AI 正在思考中...</div>
           </div>
-        </div>
 
-        <!-- Error Message -->
-        <div v-if="errorMessage && lastQuestion" class="message error-message">
-          <div class="message-avatar">⚠️</div>
-          <div class="message-content">
-            <div class="error-text">{{ errorMessage }}</div>
-            <button @click="retryLastQuestion" class="retry-btn" >重试</button>
+          <!-- Retrieval status & preview -->
+          <transition name="fade-slide">
+            <div 
+              v-if="isLoading && showRetrievalBanner && (progress.stage === 'retrieve' || progress.stage === 'generate')"
+              class="retrieval-status"
+            >
+              <div class="retrieval-banner">
+                <span class="retrieval-glow"></span>
+                <span class="retrieval-text">
+                  {{ progress.stage === 'retrieve' ? '已检索到相关文档，正在分析内容…' : 'AI 正在整理回答，请稍候…' }}
+                </span>
+              </div>
+              <div v-if="showSources" class="retrieval-sources">
+                <div 
+                  v-if="retrievalPreviewSources.length > 0"
+                  class="retrieval-sources-grid"
+                >
+                  <div 
+                    v-for="(source, index) in retrievalPreviewSources" 
+                    :key="`retrieval-${source.file_path}-${source.chunk_index}`"
+                    class="retrieval-source-card"
+                  >
+                    <div class="retrieval-source-badge">{{ index + 1 }}</div>
+                    <div class="retrieval-source-meta">
+                      <div class="retrieval-source-domain">{{ (source.file_path || '').split('/')[0] || '文档' }}</div>
+                      <div class="retrieval-source-title" :title="source.title">{{ source.title }}</div>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="retrieval-sources-grid skeleton">
+                  <div class="retrieval-source-card skeleton-card" v-for="n in 3" :key="`skeleton-${n}`">
+                    <div class="retrieval-source-badge shimmering"></div>
+                    <div class="retrieval-source-meta">
+                      <div class="shimmer-line short"></div>
+                      <div class="shimmer-line"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </transition>
+
+          <!-- Loading Message -->
+          <div v-if="isLoading" class="message ai-message loading-message">
+            <div class="message-avatar">🤖</div>
+            <div class="message-content">
+              <div class="typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <div class="loading-text">AI 正在思考中...</div>
+            </div>
+          </div>
+
+          <!-- Error Message -->
+          <div v-if="errorMessage && lastQuestion" class="message error-message">
+            <div class="message-avatar">⚠️</div>
+            <div class="message-content">
+              <div class="error-text">{{ errorMessage }}</div>
+              <button @click="retryLastQuestion" class="retry-btn" >重试</button>
+            </div>
           </div>
         </div>
       </div>
@@ -151,42 +210,53 @@
             </button>
           </div>
         </form>
-        
-        <!-- Quick Actions -->
-        <div class="quick-actions">
-          <button @click="clearChat" class="action-btn clear-btn">
-            🗑️ 清空对话
-          </button>
-          <button @click="toggleSources" class="action-btn sources-btn">
-            {{ showSources ? '隐藏' : '显示' }}参考资料
-          </button>
-        </div>
       </div>
     </div>
   </div>
 </template>
 
-## TODO
 <script setup lang="ts">
 import { ref, onMounted, nextTick, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { aiApiClient, type ChatMessage, type ChatResponse, type SourceReference, getAIErrorMessage } from '@/api/ai';
+import { aiApiClient, type ChatMessage, type ChatResponse, type SourceReference, type ConversationDetail, getAIErrorMessage } from '@/api/ai';
+import { useConversations } from '@/composables/useConversations';
 
 // Props
 interface Props {
   autoExpand?: boolean;
   maxMessages?: number;
   persistHistory?: boolean;
+  inline?: boolean; // inline mode renders as block instead of fixed bubble
+  inlineHeight?: number; // height for inline chat area
+  hideCompact?: boolean; // hide compact bubble trigger
+  conversationId?: string | null;
+  autoCreateConversation?: boolean;
+  autoRename?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   autoExpand: false,
   maxMessages: 100,
-  persistHistory: true,
+  persistHistory: false,
+  inline: false,
+  inlineHeight: 460,
+  hideCompact: false,
+  conversationId: null,
+  autoCreateConversation: true,
+  autoRename: true,
 });
 
 // Router instance
 const router = useRouter();
+const {
+  activeConversationId,
+  activeConversation,
+  setActive,
+  loadDetail,
+  refresh,
+  markActivity,
+  markRenamed,
+} = useConversations();
 
 // Reactive state
 const isExpanded = ref(props.autoExpand);
@@ -197,6 +267,14 @@ const currentInput = ref('');
 const messages = ref<(ChatMessage & { sources?: SourceReference[] })[]>([]);
 const showSources = ref(true);
 const lastQuestion = ref('');
+const currentQuestion = ref('');
+const progress = ref<{ stage: 'retrieve' | 'generate' | 'done' | '' }>({ stage: '' });
+const retrievalPreviewSources = ref<SourceReference[]>([]);
+const showRetrievalBanner = ref(false);
+const currentConversationId = ref<string | null>(props.conversationId ?? null);
+const historyLoading = ref(false);
+const historyError = ref('');
+const hasRenamedCurrentConversation = ref(false);
 
 // Refs for DOM elements
 const messagesContainer = ref<HTMLElement | null>(null);
@@ -266,15 +344,181 @@ const navigateToSource = (source: SourceReference) => {
   }
 };
 
+const defaultTitleMarkers = ['new conversation', '新的对话', '新建对话', '未命名对话'];
+
+const isDefaultConversationTitle = (title?: string | null) => {
+  if (!title) return true;
+  const normalized = title.trim().toLowerCase();
+  return defaultTitleMarkers.some((marker) => normalized.startsWith(marker));
+};
+
+const buildTitleFromQuestion = (question: string) => {
+  const trimmed = question.trim();
+  if (!trimmed) return '新建对话';
+  return trimmed.length > 24 ? `${trimmed.slice(0, 24)}...` : trimmed;
+};
+
+const resetConversationState = () => {
+  messages.value = [];
+  historyError.value = '';
+  progress.value.stage = '';
+  retrievalPreviewSources.value = [];
+  showRetrievalBanner.value = false;
+  hasRenamedCurrentConversation.value = false;
+  currentQuestion.value = '';
+  lastQuestion.value = '';
+};
+
+const hydrateConversation = (detail: ConversationDetail) => {
+  const hydrated = detail.messages.map((msg) => {
+    const base = {
+      role: msg.role as 'user' | 'assistant',
+      content: msg.content,
+      timestamp:
+        typeof msg.timestamp === 'string'
+          ? msg.timestamp
+          : new Date(msg.timestamp).toISOString(),
+    } as ChatMessage & { sources?: SourceReference[] };
+    if (msg.sources && msg.sources.length > 0) {
+      base.sources = msg.sources;
+    }
+    return base;
+  });
+  messages.value = hydrated;
+
+  const lastUser = [...hydrated].reverse().find((msg) => msg.role === 'user');
+  if (lastUser) {
+    currentQuestion.value = lastUser.content;
+    lastQuestion.value = lastUser.content;
+  }
+
+  hasRenamedCurrentConversation.value = !isDefaultConversationTitle(detail.title);
+};
+
+const loadConversation = async (conversationId: string) => {
+  resetConversationState();
+  historyLoading.value = true;
+  historyError.value = '';
+  try {
+    const detail = await loadDetail(conversationId);
+    hydrateConversation(detail);
+    currentConversationId.value = detail.id;
+    setActive(detail.id);
+    await scrollToBottom();
+  } catch (error) {
+    console.error('Failed to load conversation history:', error);
+    historyError.value = getAIErrorMessage(error);
+  } finally {
+    historyLoading.value = false;
+  }
+};
+
+const ensureConversation = async (): Promise<string | null> => {
+  if (currentConversationId.value) {
+    return currentConversationId.value;
+  }
+  if (props.conversationId) {
+    currentConversationId.value = props.conversationId;
+    setActive(props.conversationId);
+    return props.conversationId;
+  }
+  if (!props.autoCreateConversation) {
+    throw new Error('No active conversation. 创建对话后再发送消息。');
+  }
+  return null;
+};
+
+const maybeRenameConversation = async (conversationId: string, question: string) => {
+  if (!props.autoRename || hasRenamedCurrentConversation.value) return;
+  const candidate = buildTitleFromQuestion(question);
+  if (!candidate) return;
+  const convo = activeConversation.value;
+  if (convo && convo.id === conversationId && !isDefaultConversationTitle(convo.title)) {
+    hasRenamedCurrentConversation.value = true;
+    return;
+  }
+  try {
+    await aiApiClient.renameConversation(conversationId, candidate);
+    markRenamed(conversationId, candidate);
+    hasRenamedCurrentConversation.value = true;
+  } catch (error) {
+    console.warn('Failed to rename conversation:', error);
+  }
+};
+
+const reloadCurrentConversation = async () => {
+  if (!currentConversationId.value) return;
+  await loadConversation(currentConversationId.value);
+};
+
+watch(
+  () => props.conversationId,
+  (newId) => {
+    if (!newId) {
+      currentConversationId.value = null;
+      resetConversationState();
+      return;
+    }
+    // Skip only when already loaded for this id and no error
+    if (
+      newId === currentConversationId.value &&
+      messages.value.length > 0 &&
+      !historyError.value
+    ) {
+      return;
+    }
+    loadConversation(newId);
+  },
+  { immediate: true },
+);
+
+watch(
+  activeConversationId,
+  async (newId) => {
+    // If parent controls via prop, don't auto-load by active id
+    if (props.conversationId) return;
+
+    // No active id → reset
+    if (!newId) {
+      currentConversationId.value = null;
+      resetConversationState();
+      return;
+    }
+
+    // Skip duplicate loads if already hydrated and no error
+    if (newId === currentConversationId.value && messages.value.length > 0 && !historyError.value) {
+      return;
+    }
+
+    currentConversationId.value = newId;
+    await loadConversation(newId);
+  },
+  { immediate: true },
+);
+
 const sendMessage = async () => {
   const question = currentInput.value.trim();
   if (!question || isLoading.value) return;
 
   lastQuestion.value = question;
+  currentQuestion.value = question;
   currentInput.value = '';
   isLoading.value = true;
   hasError.value = false;
   errorMessage.value = '';
+
+  let conversationId: string | null = null;
+  try {
+    conversationId = await ensureConversation();
+  } catch (error) {
+    isLoading.value = false;
+    hasError.value = true;
+    errorMessage.value = getAIErrorMessage(error);
+    return;
+  }
+  if (conversationId) {
+    currentConversationId.value = conversationId;
+  }
 
   // Add user message
   const userMessage: ChatMessage = {
@@ -283,10 +527,27 @@ const sendMessage = async () => {
     timestamp: new Date().toISOString(),
   };
   messages.value.push(userMessage);
+  if (messages.value.length > props.maxMessages) {
+    messages.value.splice(0, messages.value.length - props.maxMessages);
+  }
+  // Move conversation to top only when user actually sends a message
+  if (conversationId) {
+    markActivity(conversationId, userMessage.timestamp);
+  }
   
   await scrollToBottom();
 
   try {
+    progress.value.stage = 'retrieve';
+    // 1) vector search first: show sources immediately when available
+    let retrievedSources: SourceReference[] = [];
+    try {
+      const vs = await aiApiClient.vectorSearch({ query: question, top_k: 3 });
+      retrievedSources = vs.sources || [];
+    } catch (_) {
+      // ignore vector search failure; proceed to chat
+    }
+
     // Prepare chat history
     const history = messages.value.slice(-10).map(msg => ({
       role: msg.role,
@@ -294,28 +555,66 @@ const sendMessage = async () => {
       timestamp: msg.timestamp,
     }));
 
-    // Call AI service
+    // Present a retrieval banner instead of inserting a staged message
+    showRetrievalBanner.value = true;
+    retrievalPreviewSources.value = showSources.value ? retrievedSources : [];
+
+    progress.value.stage = 'generate';
+    // 2) call AI to generate the final answer
     const response: ChatResponse = await aiApiClient.chat({
       question,
       history,
       include_sources: showSources.value,
       temperature: 0.1,
+      conversation_id: conversationId ?? undefined,
     });
 
-    // Add AI response
+    // Merge sources (vector-search + final)
+    const mergedSources = (response.sources && response.sources.length > 0)
+      ? response.sources
+      : retrievedSources;
+
+    // 3) push final AI message with sources
     const aiMessage = {
       role: 'assistant' as const,
       content: response.answer,
       timestamp: new Date().toISOString(),
-      sources: response.sources,
+      sources: mergedSources,
     };
     messages.value.push(aiMessage);
+    if (messages.value.length > props.maxMessages) {
+      messages.value.splice(0, messages.value.length - props.maxMessages);
+    }
+    const resolvedConversationId = response.conversation_id || conversationId;
+    if (resolvedConversationId) {
+      const wasNewConversation = !conversationId;
+      if (resolvedConversationId !== currentConversationId.value) {
+        currentConversationId.value = resolvedConversationId;
+        setActive(resolvedConversationId);
+      }
+      if (wasNewConversation) {
+        await refresh().catch(() => {});
+      }
+      markActivity(resolvedConversationId, aiMessage.timestamp);
+      progress.value.stage = 'done';
+      await maybeRenameConversation(resolvedConversationId, question);
+    } else {
+      progress.value.stage = 'done';
+    }
+
+    retrievalPreviewSources.value = [];
+    showRetrievalBanner.value = false;
 
   } catch (error) {
     hasError.value = true;
     errorMessage.value = getAIErrorMessage(error);
     console.error('AI chat error:', error);
   } finally {
+    if (progress.value.stage !== 'done') {
+      progress.value.stage = '';
+    }
+    retrievalPreviewSources.value = [];
+    showRetrievalBanner.value = false;
     isLoading.value = false;
     await scrollToBottom();
     await nextTick();
@@ -390,7 +689,6 @@ const formatMessage = (content: string) => {
     .replace(/^# (.+)$/gm, '<h2 class="msg-h2">$1</h2>')
     // 处理换行，但保持段落结构
     .replace(/\n\n/g, '</p><p class="msg-paragraph">')
-    .replace(/\n/g, '<br>')
     // 添加段落包装
     .replace(/^(.+)/, '<p class="msg-paragraph">$1')
     .replace(/(.+)$/, '$1</p>')
@@ -407,7 +705,7 @@ const formatTime = (timestamp: string) => {
 
 // Persistence
 const saveHistory = () => {
-  if (props.persistHistory) {
+  if (props.persistHistory && !currentConversationId.value) {
     try {
       localStorage.setItem('chatbot-history', JSON.stringify(messages.value));
     } catch (error) {
@@ -417,7 +715,7 @@ const saveHistory = () => {
 };
 
 const loadHistory = () => {
-  if (props.persistHistory) {
+  if (props.persistHistory && !currentConversationId.value) {
     try {
       const saved = localStorage.getItem('chatbot-history');
       if (saved) {
@@ -442,6 +740,28 @@ onMounted(() => {
     errorMessage.value = 'AI 服务连接失败，请稍后重试';
   });
 });
+
+// Programmatic control API
+const ask = async (question: string) => {
+  if (!question) return;
+  isExpanded.value = true;
+  currentQuestion.value = question;
+  await nextTick();
+  currentInput.value = question;
+  await sendMessage();
+};
+
+const open = async () => {
+  isExpanded.value = true;
+  await nextTick();
+  inputRef.value?.focus();
+};
+
+const close = () => {
+  isExpanded.value = false;
+};
+
+defineExpose({ ask, open, close, currentQuestion });
 </script>
 
 <style scoped>
@@ -452,6 +772,15 @@ onMounted(() => {
   z-index: 1000;
   font-family: inherit;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chatbot-window.inline-mode {
+  position: relative;
+  bottom: auto;
+  right: auto;
+  left: auto;
+  z-index: auto;
+  font-family: var(--font-family-sans);
 }
 
 /* Compact State */
@@ -518,6 +847,23 @@ onMounted(() => {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+/* Inline mode seamless styling */
+.chatbot-window.inline-mode .chatbot-expanded {
+  background: transparent;
+  backdrop-filter: none;
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
+  width: 100%;
+  height: auto;
+  min-height: 500px;
+  max-height: 80vh;
+  margin: 0;
+  padding: 0;
+}
+
+
+
 @media (prefers-color-scheme: dark) {
   .chatbot-expanded {
     background: rgba(40, 40, 40, 0.95);
@@ -581,155 +927,478 @@ onMounted(() => {
 /* Messages */
 .messages-container {
   flex: 1;
-  overflow-y: auto;
   padding: 1rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  width: 100%;
 }
 
-.message {
+.messages-inner {
   display: flex;
-  gap: 0.75rem;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 12px 24px;
+  box-sizing: border-box;
 }
 
-.message-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+/* Hide header in inline mode */
+.chatbot-window.inline-mode .chat-header {
+  display: none;
+}
+
+/* Inline mode messages styling */
+.chatbot-window.inline-mode .messages-container {
+  padding: 0 24px;
+  background: transparent;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+}
+
+.chatbot-window.inline-mode .messages-inner {
+  max-width: 760px;
+}
+
+/* Sticky question header (top question) */
+.sticky-question-header {
+  position: sticky;
+  top: 0;
+  background: var(--color-bg-primary, #ffffff);
+  border-bottom: 1px solid var(--color-border-default, rgba(0, 0, 0, 0.08));
+  padding: 12px 0;
+  margin-bottom: 12px;
+  z-index: 10;
+}
+
+.question-title {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.progress-bar { display: flex; align-items: center; gap: 8px; justify-content: center; margin-bottom: 4px; color: #8a8a8a; font-size: 12px; }
+.progress-dot { width: 16px; height: 16px; border-radius: 50%; background: #d9d9d9; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 10px; }
+.progress-dot.done { background: #667eea; }
+.progress-line { height: 2px; width: 60px; background: #d9d9d9; }
+.progress-line.done { background: #667eea; }
+.progress-bar .active { color: #333; }
+
+.conversation-status {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
+  gap: 8px;
+  margin: 12px 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.conversation-status.error {
+  color: #d04747;
+}
+
+.conversation-status .loading-spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: var(--color-primary);
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+
+.message {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+  padding: 4px 0 28px;
+}
+
+.message.user-message {
+  align-items: flex-end;
+}
+
+.message-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
   flex-shrink: 0;
+  background: linear-gradient(135deg, #6d7efb 0%, #8a5cf1 100%);
+  color: #fff;
+  box-shadow: 0 8px 16px rgba(109, 126, 251, 0.2);
 }
 
-.user-message .message-avatar {
-  background: #667eea;
-}
-
-.ai-message .message-avatar {
-  background: #764ba2;
+.message.user-message .message-avatar {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
 }
 
 .message-content {
-  flex: 1;
-  max-width: calc(100% - 48px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: min(720px, 100%);
+}
+
+.message.user-message .message-content {
+  align-items: flex-end;
+}
+
+.message.ai-message .message-content {
+  align-items: flex-start;
 }
 
 .message-text {
-  background: #f5f5f5;
-  padding: 0.75rem;
-  border-radius: 12px;
-  line-height: 1.5;
-  word-wrap: break-word;
+  max-width: 100%;
+  word-break: break-word;
+  color: var(--color-text-primary, #0f172a);
+  font-size: 16px;
+  line-height: 1.78;
 }
 
-@media (prefers-color-scheme: dark) {
-  .message-text {
-    background: #2d2d2d;
-  }
+.message.ai-message .message-text {
+  background: transparent;
+  border: none;
+  padding: 0;
+  box-shadow: none;
 }
 
-.user-message .message-text {
-  background: #667eea;
-  color: white;
-  margin-left: auto;
+.message.user-message .message-text {
+  background: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%);
+  color: #fff;
+  border: none;
+  border-radius: 18px 4px 18px 18px;
+  box-shadow: 0 12px 24px rgba(99, 102, 241, 0.35);
+  padding: 12px 16px;
+  max-width: clamp(200px, 60%, 420px);
+  text-align: left;
 }
 
-.message-time {
-  font-size: 0.75rem;
-  color: #666;
-  margin-top: 0.25rem;
+/* Inline mode message styling */
+.chatbot-window.inline-mode .message { margin: 20px 0 32px; padding-bottom: 0; }
+.chatbot-window.inline-mode .message-content { max-width: 740px; }
+.chatbot-window.inline-mode .ai-message .message-text {
+  font-size: 17px;
+  line-height: 1.82;
+  width: 100%;
 }
-
-@media (prefers-color-scheme: dark) {
-  .message-time {
-    color: #999;
-  }
+.chatbot-window.inline-mode .user-message .message-text {
+  background: var(--color-primary);
+  color: #fff;
+  border-radius: 24px 0 24px 24px;
+  padding: 12px 18px;
 }
+.chatbot-window.inline-mode .message-avatar { display: none; }
+.chatbot-window.inline-mode .ai-message .message-content { align-items: flex-start; }
 
-/* Sources */
-.message-sources {
-  margin-top: 0.75rem;
-  padding: 0.75rem;
-  background: rgba(102, 126, 234, 0.1);
-  border-radius: 8px;
-  border-left: 3px solid #667eea;
-}
 
-.message-sources h5 {
-  margin: 0 0 0.5rem 0;
-  font-size: 0.875rem;
-  color: #667eea;
-}
 
-.sources-list {
+/* Answer sources */
+.answer-sources {
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 10px;
 }
 
-.source-item {
+.answer-sources-grid {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.answer-sources-grid::-webkit-scrollbar {
+  display: none;
+}
+
+.answer-source-card {
+  display: flex;
   align-items: center;
-  font-size: 0.75rem;
-  padding: 0.5rem;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 6px;
-  transition: all 0.2s ease;
+  gap: 12px;
+  background: rgba(248, 250, 255, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 14px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+  min-width: clamp(220px, 30%, 260px);
+  flex: 0 0 auto;
+}
+
+.answer-source-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(99, 102, 241, 0.6);
+  box-shadow: 0 20px 38px rgba(79, 70, 229, 0.18);
+}
+
+.answer-source-index {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: rgba(79, 70, 229, 0.12);
+  color: #4f46e5;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 13px;
+}
+
+.answer-source-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.answer-source-domain {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.answer-source-desc {
+  font-size: 14px;
+  color: #0f172a;
+  font-weight: 600;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Retrieval preview */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.25s ease;
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.retrieval-status {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 8px 0 28px;
+  width: 100%;
+}
+
+.retrieval-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.12) 0%, rgba(14, 165, 233, 0.08) 100%);
+  color: #334155;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+.retrieval-glow {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #4f46e5;
+  box-shadow: 0 0 0 6px rgba(79, 70, 229, 0.15);
+  animation: pulse-glow 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    transform: scale(0.85);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+}
+
+.retrieval-text {
   position: relative;
 }
 
-/* Clickable source styling */
-.source-item.clickable {
-  cursor: pointer;
-  border: 1px solid transparent;
+.retrieval-sources {
+  width: 100%;
 }
 
-.source-item.clickable:hover {
-  background: rgba(102, 126, 234, 0.15);
-  border-color: rgba(102, 126, 234, 0.3);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+.retrieval-sources-grid {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
 
-.source-item.clickable:active {
-  transform: translateY(0);
-  box-shadow: 0 1px 4px rgba(102, 126, 234, 0.2);
+.retrieval-sources-grid::-webkit-scrollbar {
+  display: none;
 }
 
-.source-title {
-  font-weight: 500;
-  color: #333;
+.retrieval-source-card {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  flex: 1;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(241, 245, 249, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  min-width: clamp(200px, 28%, 240px);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+  pointer-events: none;
 }
 
-.source-icon {
-  font-size: 0.875rem;
-  opacity: 0.7;
-}
-
-.source-score {
-  color: #667eea;
+.retrieval-source-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background: rgba(79, 70, 229, 0.12);
+  color: #4f46e5;
   font-weight: 600;
-  margin: 0 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
 }
 
-.source-link-icon {
-  font-size: 0.75rem;
-  opacity: 0.6;
-  transition: opacity 0.2s ease;
+.retrieval-source-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
 }
 
-.source-item.clickable:hover .source-link-icon {
-  opacity: 1;
-  transform: scale(1.1);
+.retrieval-source-domain {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #748096;
+  font-weight: 600;
+}
+
+.retrieval-source-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.32;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.retrieval-sources-grid.skeleton .retrieval-source-card {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(148, 163, 184, 0.18);
+  background: rgba(226, 232, 240, 0.65);
+}
+
+.shimmer-line,
+.retrieval-source-badge.shimmering {
+  background: linear-gradient(90deg, rgba(226, 232, 240, 0.2) 0%, rgba(148, 163, 184, 0.45) 50%, rgba(226, 232, 240, 0.2) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite;
+}
+
+.shimmer-line {
+  height: 10px;
+  border-radius: 999px;
+}
+
+.shimmer-line.short {
+  width: 90px;
+}
+
+.shimmer-line:not(.short) {
+  width: 150px;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@media (prefers-color-scheme: dark) {
+  .message.ai-message .message-text {
+    color: #e2e8f0;
+  }
+
+  .message.user-message .message-text {
+    background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 100%);
+    box-shadow: 0 14px 32px rgba(76, 29, 149, 0.4);
+  }
+
+  .answer-source-card {
+    background: rgba(30, 41, 59, 0.75);
+    border-color: rgba(99, 102, 241, 0.35);
+    box-shadow: 0 16px 32px rgba(2, 6, 23, 0.45);
+  }
+
+  .answer-source-domain {
+    color: rgba(148, 163, 184, 0.8);
+  }
+
+  .answer-source-desc {
+    color: #f9fafb;
+  }
+
+  .retrieval-banner {
+    background: linear-gradient(135deg, rgba(89, 82, 200, 0.35) 0%, rgba(14, 116, 144, 0.28) 100%);
+    color: #e2e8f0;
+  }
+
+  .retrieval-source-card {
+    background: rgba(30, 41, 59, 0.72);
+    border-color: rgba(99, 102, 241, 0.28);
+    box-shadow: 0 16px 32px rgba(2, 6, 23, 0.55);
+  }
+
+  .retrieval-source-domain {
+    color: rgba(148, 163, 184, 0.75);
+  }
+
+  .retrieval-source-title {
+    color: #f8fafc;
+  }
+
+  .shimmer-line,
+  .retrieval-source-badge.shimmering {
+    background: linear-gradient(90deg, rgba(30, 41, 59, 0.35) 0%, rgba(148, 163, 184, 0.45) 50%, rgba(30, 41, 59, 0.35) 100%);
+  }
 }
 
 /* Welcome Message */
@@ -768,6 +1437,7 @@ onMounted(() => {
 }
 
 /* Loading */
+
 .typing-indicator {
   display: flex;
   gap: 4px;
@@ -778,7 +1448,7 @@ onMounted(() => {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #667eea;
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   animation: typing 1.4s infinite ease-in-out;
 }
 
@@ -802,9 +1472,30 @@ onMounted(() => {
 }
 
 .loading-text {
-  font-size: 0.875rem;
-  color: #666;
-  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.loading-message {
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 28px;
+}
+
+.loading-message .message-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  box-shadow: none;
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+}
+
+.loading-message .message-content {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
 }
 
 /* Error Message */
@@ -844,6 +1535,24 @@ onMounted(() => {
   border-radius: 0 0 16px 16px;
 }
 
+/* Perplexity-style Input Area */
+.chatbot-window.inline-mode .input-area {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  margin-top: 16px;
+  padding: 8px 12px;
+  position: sticky;
+  bottom: 20px;
+  z-index: 50;
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
 @media (prefers-color-scheme: dark) {
   .input-area {
     background: rgba(30, 30, 30, 0.8);
@@ -870,13 +1579,163 @@ onMounted(() => {
   resize: none;
   outline: none;
   transition: border-color 0.2s;
-  min-height: 44px;
+
   max-height: 120px;
   font-family: inherit;
 }
 
 .message-input:focus {
   border-color: #667eea;
+}
+
+/* Perplexity-style Input Styling */
+.chatbot-window.inline-mode .message-input {
+  border: none;
+  background: transparent;
+  padding: 8px 12px;
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 20px;
+  max-height: 120px;
+  resize: none;
+  outline: none;
+  color: var(--color-text-primary);
+  font-weight: 400;
+}
+
+.chatbot-window.inline-mode .message-input::placeholder {
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+.chatbot-window.inline-mode .send-btn {
+  background: #667eea;
+  border: none;
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.chatbot-window.inline-mode .send-btn:hover:not(:disabled) {
+  background: #5a6fd8;
+  transform: scale(1.05);
+}
+
+.chatbot-window.inline-mode .send-btn:disabled {
+  background: #e2e8f0;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.chatbot-window.inline-mode .input-group {
+  align-items: center;
+  gap: 12px;
+}
+
+/* Dark mode support for Perplexity-style elements */
+@media (prefers-color-scheme: dark) {
+  .sticky-question-header {
+    background: var(--color-bg-primary, #1a1a1a);
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+  }
+
+  
+  .sources-header {
+    color: #e2e8f0 !important;
+  }
+  
+  .source-card {
+    background: #2d3748;
+    border-color: #4a5568;
+  }
+  
+  .source-card:hover {
+    background: #374151;
+    border-color: #6b7280;
+  }
+  
+  .source-title {
+    color: #f7fafc;
+  }
+  
+  .source-score {
+    color: #a0aec0;
+  }
+  
+  .chatbot-window.inline-mode .input-area {
+    background: rgba(26, 32, 44, 0.8);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .chatbot-window.inline-mode .message-input {
+    color: #f7fafc;
+  }
+  
+  .chatbot-window.inline-mode .message-input::placeholder {
+    color: #718096;
+  }
+}
+
+/* Mobile responsive styling */
+@media (max-width: 768px) {
+  
+  .sticky-question-header {
+    padding: 16px 0;
+    margin-bottom: 24px;
+  }
+  
+  .sources-grid {
+    flex-direction: column;
+    gap: 6px;
+  }
+  
+  .source-card {
+    padding: 6px 8px;
+    min-width: auto;
+    max-width: none;
+  }
+  
+  .source-number {
+    width: 16px;
+    height: 16px;
+    font-size: 9px;
+    margin-right: 6px;
+  }
+  
+  .source-title {
+    font-size: 10px;
+  }
+  
+  .source-score {
+    font-size: 8px;
+  }
+  
+  .chatbot-window.inline-mode .input-area {
+    margin-top: 24px;
+    padding: 6px 10px;
+    border-radius: 14px;
+    bottom: 12px;
+    max-width: 95%;
+  }
+  
+  .chatbot-window.inline-mode .message-input {
+    font-size: 14px;
+    padding: 6px 10px;
+    min-height: 14px;
+  }
+  
+  .chatbot-window.inline-mode .send-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -987,14 +1846,33 @@ onMounted(() => {
 
 /* Message Content Formatting */
 .message-text :deep(.code-block) {
-  color: #f8f8f2;
-  padding: 1rem;
-  border-radius: 8px;
-  margin: 0.5rem 0;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, rgba(248, 250, 255, 0.96) 0%, rgba(241, 245, 249, 0.94) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+  color: #1f2937;
+  padding: 16px 18px;
+  border-radius: 14px;
+  margin: 0.75rem 0;
   overflow-x: auto;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 0.875rem;
-  line-height: 1.4;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.message-text :deep(.code-block code) {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  margin: 0;
+  line-height: inherit;
+  font-size: inherit;
+  overflow-wrap: anywhere;
 }
 
 .message-text :deep(.inline-code) {
@@ -1019,6 +1897,13 @@ onMounted(() => {
   .message-text :deep(.inline-code) {
     background: rgba(102, 126, 234, 0.2);
     color: #8fa6ff;
+  }
+
+  .message-text :deep(.code-block) {
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.92) 0%, rgba(15, 23, 42, 0.88) 100%);
+    border-color: rgba(99, 102, 241, 0.35);
+    box-shadow: 0 22px 40px rgba(2, 6, 23, 0.55);
+    color: #e2e8f0;
   }
 }
 
@@ -1119,4 +2004,4 @@ onMounted(() => {
     animation: none;
   }
 }
-</style> 
+</style>

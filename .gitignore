@@ -36,3 +36,8 @@ repomix-*
 *.njsproj
 *.sln
 *.sw?
+
+.specstory/
+.cursorindexingignore
+packages/ai-service/.python-version
+.python-version

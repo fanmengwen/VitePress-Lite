@@ -21,10 +21,6 @@
           <span class="nav-icon">🏠</span>
           <span>首页</span>
         </router-link>
-        <router-link v-if="docsHomePath" :to="docsHomePath" class="nav-item" active-class="active">
-          <span class="nav-icon">📖</span>
-          <span>文档</span>
-        </router-link>
         <a
           :href="githubUrl"
           class="nav-item"
@@ -59,10 +55,6 @@
           <router-link to="/" class="mobile-nav-item" @click="closeMobileMenu">
             <span class="nav-icon">🏠</span>
             <span>首页</span>
-          </router-link>
-          <router-link v-if="docsHomePath" :to="docsHomePath" class="mobile-nav-item" @click="closeMobileMenu">
-            <span class="nav-icon">📖</span>
-            <span>文档</span>
           </router-link>
           <a
             v-if="githubUrl"

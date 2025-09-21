@@ -1,8 +1,7 @@
 ---
 title: 【Vite 插件 API】
-date: 2025-09-10
-author: meng
-tags: ["Vite", "Plugin"]
+date: "2025-09-10"
+author: "mengwen"
 published: true
 excerpt: "插件 API"
 ---

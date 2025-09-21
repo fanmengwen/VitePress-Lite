@@ -4,14 +4,20 @@ import { createRouter, createWebHistory } from "vue-router";
 
 import generatedRoutes from "virtual:pages";
 
-import IndexPage from "../pages/Index.vue";
 import Simple404 from "../components/Simple404.vue";
+import IndexPage from "../pages/Index.vue";
+import KnowledgeBase from "../pages/KnowledgeBase.vue";
 
 const staticRoutes = [
   {
     path: "/",
     title: "首页",
     component: IndexPage,
+  },
+  {
+    path: "/kb",
+    title: "知识库",
+    component: KnowledgeBase,
   },
 ];
 

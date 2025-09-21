@@ -23,8 +23,6 @@ logs/
 
 # Not needed in dev image
 tests/
-poetry.lock
-pyproject.toml
 README.md
 optimization_results.md
 docs/

@@ -1,0 +1,48 @@
+services:
+  ai-service:
+    build:
+      context: ./packages/ai-service
+      dockerfile: Dockerfile
+    env_file:
+      - ./packages/ai-service/.env
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8000
+      DOCS_PATH: /app/docs
+      CHROMADB_PATH: /app/data/chroma_db
+      CONVERSATION_DB_PATH: /app/data/conversations.sqlite3
+    volumes:
+      - ./docs:/app/docs:ro
+      - ai_data:/app/data
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  docs-site:
+    build:
+      context: .
+      dockerfile: packages/docs-site/Dockerfile
+      args:
+        VITE_API_BASE_URL: /api
+    depends_on:
+      ai-service:
+        condition: service_healthy
+    environment:
+      VITE_API_BASE_URL: /api
+    ports:
+      - "4173:4173"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:4173/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  ai_data:
+    driver: local

@@ -1,445 +1,163 @@
-# AI 服务 - VitePress-Lite
+# AI 服务 (VitePress-Lite)
 
-基于 RAG（检索增强生成）架构的 AI 驱动文档问答服务。该服务通过向量检索与大语言模型结合，为 Vite 文档内容提供智能问答能力。
+本项目为 VitePress-Lite 文档提供基于检索增强生成 (Retrieval-Augmented Generation, RAG) 的后端服务，旨在为文档内容提供智能问答能力。
 
-## 🚀 功能特性
+## 核心功能
 
-- **RAG 架构**：结合向量搜索与语言模型生成
-- **多模型支持**：支持 OpenAI、阿里云通义千问、DeepSeek 等多个LLM提供商
-- **智能切块**：基于 Markdown 结构的智能文档分块处理
-- **向量搜索**：基于 ChromaDB 的语义检索
-- **中文支持**：原生中文理解能力
-- **FastAPI 后端**：现代化异步 Python API
-- **友好界面**：支持代码块、列表等格式化消息显示
-- **Docker 支持**：容器化部署
+- **RAG 架构**: 采用先进的 RAG 管道，为用户问题提供精准、上下文感知的回答。
+- **多 LLM 支持**: 内置对 OpenAI, 阿里云通义千问, DeepSeek 等多种大语言模型的支持，具备良好的扩展性。
+- **向量检索**: 使用 ChromaDB 进行高效的语义向量检索，快速定位相关文档片段。
+- **FastAPI 后端**: 基于现代、高性能的异步 Python Web 框架 FastAPI 构建。
+- **增量索引**: 智能处理文档更新，仅对新增或变更的文件进行处理，优化索引效率。
+- **Docker 化**: 提供完整的 Docker 支持，确保开发与生产环境的一致性。
 
-## 📋 先决条件
+## 技术栈
 
-- Python 3.10+
-- 推荐使用 Poetry，或使用 pip
-- Git
+- **语言**: Python 3.10+
+- **框架**: FastAPI, Pydantic
+- **依赖管理**: Poetry
+- **向量数据库**: ChromaDB
+- **模型**: Sentence-Transformers (用于 Embedding), OpenAI/Qwen/DeepSeek (用于 LLM)
+- **测试**: Pytest, HTTPX
 
-## 🛠️ 安装
+## 环境准备
 
-### 1. 克隆并进入目录
+在开始之前，请确保您的开发环境已安装以下工具：
+
+- Python 3.10 或更高版本
+- [Poetry](https://python-poetry.org/) (Python 依赖管理工具)
+
+## 快速开始
+
+请遵循以下步骤来安装、配置并启动服务。
+
+### 1. 安装依赖
+
+进入 AI 服务目录并使用 Poetry 安装项目依赖。开发环境建议包含 "dev" 依赖组，以便进行测试和开发。
 
 ```bash
 cd packages/ai-service
+poetry install --with dev
 ```
 
-### 2. 安装依赖
+### 2. 环境配置
 
-**推荐使用 Poetry：**
+服务配置通过根目录下的 `.env` 文件进行管理。您可以复制 `.env.example` 文件（如果存在）或手动创建。
 
-````bash
-curl 'http://localhost:5173/api/chat' \
-  -H 'Accept: application/json, text/plain, */*' \
-  -H 'Accept-Language: zh-CN,zh;q=0.9,en-AU;q=0.8,en;q=0.7,is;q=0.6' \
-  -H 'Connection: keep-alive' \
-  -H 'Content-Type: application/json' \
-  -H 'Origin: http://localhost:5173' \
-  -H 'Referer: http://localhost:5173/' \
-  -H 'Sec-Fetch-Dest: empty' \
-  -H 'Sec-Fetch-Mode: cors' \
-  -H 'Sec-Fetch-Site: same-origin' \
-  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36' \
-  -H 'sec-ch-ua: "Not)A;Brand";v="8", "Chromium";v="138", "Google Chrome";v="138"' \
-  -H 'sec-ch-ua-mobile: ?0' \
-  -H 'sec-ch-ua-platform: "macOS"' \
-  --data-raw '{"question":"vite可以做什么","history":[{"role":"user","content":"什么是 Vite？","timestamp":"2025-08-04T13:22:07.239Z"},{"role":"assistant","content":"Vite 是一个现代化的前端构建工具，由 Vue.js 作者尤雨溪开发。它利用浏览器原生 ES 模块支持，提供快速的开发服务器启动和热更新，同时通过预构建依赖和按需编译提升开发体验。生产环境则基于 Rollup 进行打包。","timestamp":"2025-08-04T13:22:10.150Z"},{"role":"user","content":"vite可以做什么","timestamp":"2025-08-04T13:34:34.367Z"},{"role":"user","content":"vite可以做什么","timestamp":"2025-08-04T13:41:44.444Z"}],"temperature":0.1,"include_sources":true}'```
-
-**使用 pip：**
-
-```bash
-pip install -r requirements.txt  # 从 pyproject.toml 生成
-````
-
-### 3. 配置环境变量
-
-```bash
-cp .env.example .env
-```
-
-编辑 `.env` 文件：
+一个最小化的 `.env` 文件至少需要包含 LLM 提供商的相关凭证：
 
 ```env
-# 核心配置
-OPENAI_API_KEY=your-openai-api-key-here
+# .env
+
+# LLM 提供商配置 (选择其一: openai, qwen, deepseek)
 LLM_PROVIDER=openai
-DOCS_PATH=../docs-site/docs
+# 根据选择的提供商，配置对应的 API Key
+OPENAI_API_KEY="sk-..."
+
+# (可选) 自定义文档路径，默认为 ../../docs
+# DOCS_PATH=../../docs
 ```
 
-## ⚙️ 配置说明
+### 3. 初始化
 
-### 大语言模型（LLM）提供商
-
-```env
-LLM_PROVIDER=openai
-OPENAI_API_KEY=sk-your-key-here
-OPENAI_MODEL=gpt-3.5-turbo
-```
-
-### 文档处理配置
-
-```env
-# 文档路径
-DOCS_PATH=../docs-site/docs
-
-# 性能优化配置（自动应用）
-CHUNK_SIZE=800                    # 文档块大小（优化：1000→800）
-CHUNK_OVERLAP=100                 # 块重叠（优化：200→100）
-RETRIEVAL_TOP_K=3                 # 检索文档数（优化：5→3）
-SIMILARITY_THRESHOLD=0.3          # 相似度阈值（平衡：0.5→0.3）
-OPENAI_MAX_TOKENS=500             # 最大Token数（优化：1000→500）
-OPENAI_TEMPERATURE=0.1            # 温度参数
-CACHE_TTL=1800                    # 缓存时间（30分钟）
-```
-
-### LLM提供商配置
-
-#### 阿里云通义千问（推荐-速度快）
-
-```env
-LLM_PROVIDER=aliyun
-ALIYUN_API_KEY=your-aliyun-api-key
-ALIYUN_MODEL=qwen-turbo
-```
-
-#### DeepSeek（推荐-成本低）
-
-```env
-LLM_PROVIDER=deepseek
-DEEPSEEK_API_KEY=your-deepseek-api-key
-DEEPSEEK_MODEL=deepseek-chat
-```
-
-## 🏃‍♂️ 快速启动
-
-### 方法1：🚀 性能优化启动（推荐）
-
-使用我们的优化启动脚本，可以获得最佳性能体验：
+在首次启动服务前，需要执行数据库迁移和文档索引。
 
 ```bash
-# 一键启动优化版AI服务
-python3 start_optimized.py
+# 1. 执行数据库迁移
+poetry run ai-service migrate
+
+# 2. 索引文档内容 (将 docs/ 目录下的文档处理并存入向量数据库)
+poetry run ai-service ingest
 ```
 
-**优化效果：**
+`ingest` 命令支持增量更新，仅处理自上次运行以来发生变化的文件。
 
-- ✅ 响应时间：从19秒优化到2秒（提升91%）
-- ✅ 检索效率：减少40%检索时间
-- ✅ 生成速度：Token数量减半，生成更快
-- ✅ 自动应用最佳配置参数
+### 4. 启动服务
 
-### 方法2：标准启动
-
-#### 1. 文档切块与向量索引
-
-运行以下命令进行文档处理与索引：
+完成初始化后，即可启动 FastAPI 服务。
 
 ```bash
-# 使用 Poetry
-poetry run python scripts/ingest.py
-
-# 或直接使用 Python（推荐）
-PYTHONPATH=. python scripts/ingest.py
+poetry run ai-service serve
 ```
 
-可选参数：
+服务默认将在 `http://localhost:8000` 启动。您可以通过访问 `http://localhost:8000/health` 来检查服务健康状态。
+
+## 项目测试
+
+本项目采用 `pytest` 进行测试，测试套件覆盖了单元测试、集成测试和端到端 (E2E) 测试。
+
+### 运行测试
+
+请确保已安装 `dev` 依赖组 (`poetry install --with dev`)。
+
+#### 1. 运行单元与组件测试
+
+这些测试不依赖外部服务，可以快速执行以验证核心逻辑。
 
 ```bash
-# 清除旧数据后重新处理
-python scripts/ingest.py --clear
-
-# 仅处理指定文件
-python scripts/ingest.py --file ../docs/unit/unit1.md
-
-# 输出详细日志
-python scripts/ingest.py --verbose
+poetry run pytest tests/
 ```
 
-#### 2. 启动服务
+为了更精确地运行，可以排除需要运行服务的集成测试和E2E测试：
 
 ```bash
-# 使用 Poetry
-poetry run python src/main.py
-
-# 或直接使用 Python（推荐）
-PYTHONPATH=. python src/main.py
+poetry run pytest tests/ --ignore=tests/integration_test.py --ignore=tests/test_api_integration.py --ignore=tests/test_e2e_workflow.py
 ```
 
-默认服务地址为 `http://localhost:8000`
+#### 2. 运行集成测试
 
-#### 基础API测试
+集成测试需要服务在后台运行。
 
 ```bash
-# 测试健康状态
-curl http://localhost:8000/health
+# 终端 A: 启动服务
+poetry run ai-service serve --port 8001
 
-# 测试聊天功能
-curl -X POST "http://localhost:8000/api/chat" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "question": "什么是 Vite？",
-    "include_sources": true
-  }'
+# 终端 B: 运行集成测试脚本
+# 注意: integration_test.py 是一个独立的测试脚本
+poetry run python tests/integration_test.py --url http://localhost:8001 --test all
 ```
 
-#### 完整集成测试
+#### 3. 运行完整的 `pytest` 套件 (包含API集成测试)
 
 ```bash
-# 切换到前端目录并运行集成测试
-cd ../docs-site
-pnpm test:ai
+# 终端 A: 启动服务
+poetry run ai-service serve --port 8001
+
+# 终端 B: 运行 pytest 测试
+# 注意: 这会运行 test_api_integration.py 等文件
+poetry run pytest tests/test_api_integration.py
 ```
 
-**期望测试结果：**
+_注意：完整的测试指南请参阅 `TESTING.md` 文件。_
 
-- ✅ AI Service Health: PASSED
-- ✅ AI Chat Endpoint: PASSED
-- ✅ 响应时间 < 5秒
-- ✅ 显示 "🚀 Great response time! Optimizations are working."
+## 命令行接口 (CLI)
 
-## 📚 API 文档
+服务的所有核心操作都通过 `ai-service` 命令行工具进行。
 
-### Chat 问答接口
+- `ai-service migrate`: 执行数据库迁移。
+- `ai-service ingest`: 索引文档。支持 `--clear` 参数以强制重建索引。
+- `ai-service serve`: 启动 API 服务。支持 `--host`, `--port`, `--workers` 等参数。
 
-**POST** `/api/chat`
-
-处理用户问题并返回 AI 生成的答案与参考来源。
-
-**请求示例：**
-
-```json
-{
-  "question": "如何配置 Vite 的代理？",
-  "history": [
-    {
-      "role": "user",
-      "content": "上一个问题",
-      "timestamp": "2025-01-01T12:00:00Z"
-    }
-  ],
-  "max_tokens": 1000,
-  "temperature": 0.1,
-  "include_sources": true
-}
-```
-
-**响应示例：**
-
-```json
-{
-  "answer": "要配置 Vite 的代理，可在 vite.config.js 中使用 `server.proxy` 选项...",
-  "sources": [
-    {
-      "title": "Vite 配置指南",
-      "file_path": "unit/unit1.md",
-      "chunk_index": 2,
-      "similarity_score": 0.85,
-      "content_preview": "Vite 的代理配置允许你..."
-    }
-  ],
-  "confidence_score": 0.92,
-  "response_time_ms": 1250,
-  "tokens_used": 456
-}
-```
-
-### 健康检查
-
-**GET** `/health`
-
-```json
-{
-  "status": "healthy",
-  "timestamp": "2025-01-01T12:00:00Z",
-  "version": "0.1.0",
-  "vector_db_status": "healthy",
-  "llm_status": "healthy",
-  "documents_indexed": 42
-}
-```
-
-### 向量存储管理
-
-- **GET** `/api/vector-store/stats` - 获取向量存储统计信息
-- **DELETE** `/api/vector-store/clear` - 清除所有文档
-- **DELETE** `/api/vector-store/documents/{path}` - 删除指定文档
-
-## 🐳 Docker 部署
-
-### 构建镜像
+使用 `--help` 查看更多详情：
 
 ```bash
-docker build -t vitepress-lite-ai .
+poetry run ai-service --help
+poetry run ai-service ingest --help
 ```
 
-### 运行容器
+## Docker 部署
+
+项目根目录的 `docker-compose.yml` 文件提供了最便捷的部署方式，能够一键启动包括 AI 服务在内的所有组件。
 
 ```bash
-docker run -d   --name ai-service   -p 8000:8000   -e OPENAI_API_KEY=your-key-here   -v $(pwd)/data:/app/data   vitepress-lite-ai
+# 于项目根目录执行
+docker-compose up --build
 ```
 
-### Docker Compose 配置
+容器的入口脚本 (`entrypoint.sh`) 会自动处理依赖安装、数据库迁移和初次数据索引。
 
-```yaml
-version: "3.8"
-services:
-  ai-service:
-    build: .
-    ports:
-      - "8000:8000"
-    environment:
-      - OPENAI_API_KEY=your-key-here
-      - ENVIRONMENT=production
-    volumes:
-      - ./data:/app/data
-      - ../docs-site/docs:/app/docs:ro
-```
-
-## 🔧 开发说明
-
-### 项目结构
-
-```
-ai-service/
-├── src/
-│   ├── config/
-│   │   └── settings.py          # 配置管理
-│   ├── models/
-│   │   ├── chat.py             # API 请求/响应模型
-│   │   └── document.py         # 文档数据模型
-│   ├── services/
-│   │   ├── embedding.py        # 向量嵌入服务
-│   │   ├── vector_store.py     # ChromaDB 向量存储
-│   │   ├── llm.py             # LLM 抽象封装
-│   │   └── rag.py             # RAG 问答流程
-│   ├── utils/
-│   │   ├── chunking.py        # 文档分块处理
-│   │   └── preprocessing.py   # 内容预处理
-│   └── main.py                # FastAPI 应用入口
-├── scripts/
-│   ├── ingest.py              # 文档处理脚本
-│   └── test_service.py        # 服务测试脚本
-├── tests/
-│   ├── test_api.py            # 接口测试
-│   ├── test_rag.py           # RAG 测试
-│   └── conftest.py           # 测试配置
-├── start_optimized.py         # 🚀 性能优化启动脚本
-├── performance_config.py      # ⚡ 性能配置模块
-├── pyproject.toml            # 项目依赖配置
-├── Dockerfile               # Docker 配置
-└── README.md               # 本文档
-```
-
-## ⚡ **性能优化功能**
-
-### 🚀 优化启动脚本
-
-**命令：** `python3 start_optimized.py`
-
-**作用：**
-
-- 自动应用最佳性能配置
-- 设置优化的环境变量
-- 显示配置信息
-- 启动AI服务
-
-**优化效果：**
-| 指标 | 优化前 | 优化后 | 提升 |
-|------|--------|--------|------|
-| 响应时间 | 19秒 | ~2秒 | 91% |
-| 检索文档数 | 5个 | 3个 | 40% |
-| Token数量 | 1000 | 500 | 50% |
-
-### ⚙️ 性能配置模块
-
-**文件：** `performance_config.py`
-
-**作用：**
-
-- 定义性能优化参数
-- 自动应用环境变量
-- 可被其他脚本导入使用
-
-**主要参数：**
-
-```python
-RETRIEVAL_TOP_K = '3'         # 检索文档数量
-SIMILARITY_THRESHOLD = '0.3'   # 相似度阈值
-OPENAI_MAX_TOKENS = '500'      # 最大Token数
-CHUNK_SIZE = '800'             # 文档块大小
-CHUNK_OVERLAP = '100'          # 块重叠大小
-```
-
-### 没有文档被索引
+如需在容器运行时手动同步文档更新，可执行：
 
 ```bash
-# 检查文档路径
-ls -la ../../docs/
-
-# 重新处理并输出日志
-python scripts/ingest.py --verbose --clear
-```
-
-### ChromaDB 问题
-
-```bash
-# 清空并重新初始化向量数据库
-rm -rf ./data/chroma_db
-python scripts/ingest.py --clear
-```
-
-## 🔗 集成说明
-
-### Monorepo 集成
-
-该服务已完整集成至 VitePress-Lite 的 Monorepo 中：
-
-1. **代理配置**：前端通过 `/api/chat` 转发至该服务（已优化代理配置顺序）
-2. **文档共享**：读取 `../../docs/` 中的内容
-3. **类型共享**：使用统一接口定义
-4. **UI集成**：前端包含优化的聊天组件，支持格式化消息显示
-
-### 前端集成功能
-
-#### API客户端
-
-**文件：** `../docs-site/src/api/index.ts`
-
-```typescript
-// 已添加的便捷方法
-api.askAI(question, options?)
-```
-
-#### 聊天组件
-
-**文件：** `../docs-site/src/components/ChatbotWindow.vue`
-
-**功能特性：**
-
-- 🎨 紧凑/展开双状态设计
-- 💬 消息历史记录
-- 📱 响应式移动适配
-- 🌙 深色/浅色主题支持
-- 📚 源文档引用显示
-- ⚡ 优化的加载和错误状态
-
-#### 使用方式
-
-**完整启动流程：**
-
-```bash
-# 1. 启动AI服务（性能优化版）
-cd packages/ai-service
-python3 start_optimized.py
-
-# 2. 启动前端服务
-cd ../docs-site
-pnpm dev
-
-# 3. 访问应用
-# 打开 http://localhost:5173
-# 点击右下角的AI助手图标
+docker-compose exec ai-service ai-service ingest
 ```

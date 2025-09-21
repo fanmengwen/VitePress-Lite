@@ -1,0 +1,14 @@
+# python 
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# node
+node_modules
+
+# vitepress
+docs/.vitepress/cache
+docs/.vitepress/dist
+
+.specstory/

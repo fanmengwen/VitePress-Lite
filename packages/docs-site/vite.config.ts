@@ -1,11 +1,14 @@
-import { defineConfig } from "vite";
+// @ts-expect-error types resolved at runtime
 import vue from "@vitejs/plugin-vue";
+// @ts-expect-error third-party plugin types optional
 import markdownItAnchor from "markdown-it-anchor";
 import path from "path";
+import { defineConfig } from "vite";
+// @ts-expect-error inspect plugin types optional
 import inspect from "vite-plugin-inspect"; // 引入
 
-import virtualPagesPlugin from "./plugins/virtual-pages-plugin";
 import markdownTransformerPlugin from "./plugins/markdown-transformer-plugin";
+import virtualPagesPlugin from "./plugins/virtual-pages-plugin";
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -34,15 +37,20 @@ export default defineConfig({
   server: {
     port: 5173,
     allowedHosts: ["localhost", "127.0.0.1", "0.0.0.0", "fanmengwen.com"],
-    // 配置SPA fallback，确保所有未匹配的路由都返回index.html
-    historyApiFallback: {
-      rewrites: [
-        { from: /.*/, to: '/index.html' }
-      ]
-    },
+    // Vite 已默认提供 SPA fallback，无需额外配置
     proxy: {
       // AI service endpoints - 更具体的规则放在前面
       "/api/chat": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/api/vector-search": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/api/conversations": {
         target: "http://localhost:8000",
         changeOrigin: true,
         secure: false,

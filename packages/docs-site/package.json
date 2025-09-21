@@ -7,6 +7,7 @@
     "dev": "vite",
     "dev:docker": "vite --config vite.docker.config.ts",
     "build": "vue-tsc -b && vite build",
+    "serve:docker": "node docker-server.mjs",
     "build:prerender": "npm run build && npm run prerender:content",
     "prerender": "node scripts/simple-prerender.js",
     "prerender:content": "node scripts/content-prerender.js",
@@ -34,6 +35,9 @@
     "gray-matter": "^4.0.3",
     "markdown-it": "^14.1.0",
     "markdown-it-anchor": "^9.2.0",
+    "compression": "^1.7.4",
+    "express": "^4.21.2",
+    "http-proxy-middleware": "^3.0.3",
     "serve": "^14.2.4",
     "vue": "^3.5.17",
     "vue-router": "4"
