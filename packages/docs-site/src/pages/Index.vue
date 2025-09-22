@@ -110,7 +110,22 @@ const onAskQuick = async (q: string) => {
 .home-viewport {
   display: flex;
   height: 100vh;
-  background: var(--color-bg-primary);
+  background: transparent;
+  position: relative;
+  isolation: isolate;
+}
+
+.home-viewport::before {
+  content: "";
+  position: fixed;
+  inset: -12% -16% -18% -12%;
+  pointer-events: none;
+  background:
+    radial-gradient(85% 70% at 6% 14%, rgba(120, 187, 255, 0.28) 0%, rgba(120, 187, 255, 0) 58%),
+    radial-gradient(90% 70% at 70% 4%, rgba(154, 221, 255, 0.24) 0%, rgba(154, 221, 255, 0) 62%),
+    radial-gradient(120% 90% at 82% 78%, rgba(111, 180, 255, 0.18) 0%, rgba(111, 180, 255, 0) 70%);
+  filter: saturate(120%);
+  z-index: -1;
 }
 
 .home-main {
@@ -180,13 +195,33 @@ const onAskQuick = async (q: string) => {
 
 .chat-area { 
   width: 100%; 
-  padding: 28px;
-  background: transparent;
-  border: none;
-  box-shadow: none;
+  padding: 32px;
+  background: linear-gradient(186deg, rgba(255, 255, 255, 0.38) 0%, rgba(255, 255, 255, 0.14) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  box-shadow: 0 26px 58px -30px rgba(12, 26, 57, 0.3);
+  border-radius: 28px;
+  backdrop-filter: blur(calc(var(--glass-blur) - 6px)) saturate(160%);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) - 6px)) saturate(160%);
   flex: 1;
   display: flex;
   flex-direction: column;
+  gap: 24px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .home-viewport::before {
+    background:
+      radial-gradient(90% 70% at 6% 18%, rgba(94, 231, 255, 0.28) 0%, rgba(94, 231, 255, 0) 62%),
+      radial-gradient(85% 70% at 72% 6%, rgba(94, 92, 230, 0.2) 0%, rgba(94, 92, 230, 0) 60%),
+      radial-gradient(120% 90% at 82% 82%, rgba(37, 99, 235, 0.18) 0%, rgba(37, 99, 235, 0) 72%);
+    filter: saturate(110%);
+  }
+
+  .chat-area {
+    background: linear-gradient(186deg, rgba(14, 26, 48, 0.68) 0%, rgba(8, 17, 34, 0.42) 100%);
+    border-color: rgba(94, 129, 190, 0.32);
+    box-shadow: 0 32px 62px -28px rgba(1, 8, 24, 0.68);
+  }
 }
 
 /* Fixed Question Title */

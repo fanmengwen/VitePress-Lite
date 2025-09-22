@@ -249,37 +249,85 @@ const githubUrl =
 <style scoped>
 .side-nav {
   width: 280px;
-  padding: 20px 16px 12px;
+  padding: 22px 20px 16px;
   box-sizing: border-box;
-  border-right: 1px solid var(--color-border-light);
-  background: var(--color-bg-primary);
-  color: var(--color-text-primary);
   display: flex;
   flex-direction: column;
   height: 100vh;
+  color: var(--color-text-primary);
+  background: linear-gradient(182deg, rgba(255, 255, 255, 0.52) 0%, rgba(255, 255, 255, 0.18) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 22px;
+  backdrop-filter: saturate(160%) blur(calc(var(--glass-blur) - 6px));
+  -webkit-backdrop-filter: saturate(160%) blur(calc(var(--glass-blur) - 6px));
+  box-shadow: 0 26px 70px -28px rgba(12, 26, 57, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.side-nav::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0) 55%),
+    radial-gradient(70% 70% at 12% 16%, rgba(120, 187, 255, 0.24) 0%, rgba(120, 187, 255, 0) 70%);
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.68;
 }
 
 .sidebar-body {
   flex: 1;
   overflow-y: auto;
-  padding-right: 4px;
+  padding-right: 6px;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
 }
 
 .brand-block {
-  margin-bottom: 20px;
+  margin-bottom: 26px;
+  position: relative;
 }
 
 .brand-link {
   display: flex;
   align-items: center;
   gap: 12px;
-  text-decoration: none;
+  padding: 14px 16px;
+  border-radius: 18px;
   color: inherit;
-  outline: none !important;
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 18px 36px rgba(10, 132, 255, 0.18);
+  transition: transform var(--transition-base), box-shadow var(--transition-base), background var(--transition-base);
+  position: relative;
+  overflow: hidden;
+}
+
+.brand-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 55%);
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+.brand-link:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.32);
+  box-shadow: 0 24px 48px rgba(10, 132, 255, 0.26);
+}
+
+.brand-link:hover::after {
+  opacity: 1;
 }
 
 .brand-icon {
   font-size: 28px;
+  text-shadow: 0 12px 34px rgba(10, 132, 255, 0.32);
 }
 
 .brand-texts {
@@ -291,101 +339,85 @@ const githubUrl =
 .brand-title {
   font-weight: 800;
   font-size: 18px;
+  letter-spacing: 0.01em;
 }
 
 .brand-subtitle {
   font-size: 12px;
-  color: var(--color-text-tertiary);
+  color: rgba(66, 80, 103, 0.7);
 }
 
 .nav-links {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 24px;
+  gap: 10px;
+  margin-bottom: 28px;
 }
 
-  .nav-link {
+.nav-link {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
-  border-radius: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
   text-decoration: none;
-  color: var(--color-text-secondary);
-  transition: background 0.2s ease;
-  border: none;
-  background: transparent;
+  color: rgba(66, 80, 103, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.26);
   width: 100%;
   text-align: left;
   cursor: pointer;
+  transition: transform var(--transition-base), box-shadow var(--transition-base), background var(--transition-base), color var(--transition-base), border-color var(--transition-base);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.16);
 }
 
-.nav-link:hover {
-  background: var(--color-bg-secondary);
+.nav-link:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.nav-link:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.34);
   color: var(--color-text-primary);
+  border-color: rgba(255, 255, 255, 0.42);
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.2);
 }
 
 .nav-link.active {
-  background: var(--color-primary-50);
+  background: rgba(120, 187, 255, 0.2);
   color: var(--color-primary);
+  border-color: rgba(10, 132, 255, 0.38);
+  box-shadow: 0 28px 56px rgba(10, 132, 255, 0.22);
 }
 
 .icon {
   width: 18px;
   text-align: center;
-}
-
-.new-convo {
-  margin-bottom: 24px;
-}
-
-.new-convo-btn {
-  width: 100%;
-  height: 48px;
-  border-radius: 12px;
-  background: var(--color-primary);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-size: 15px;
-  border: none;
-  cursor: pointer;
-  transition: transform 0.2s ease;
-}
-
-.new-convo-btn:disabled {
-  opacity: 0.6;
-  cursor: progress;
-}
-
-.new-convo-btn:not(:disabled):hover {
-  transform: translateY(-1px);
-}
-
-.new-symbol {
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .action-error {
-  color: #d04747;
+  color: #ff453a;
   font-size: 12px;
-  margin-top: 8px;
+  margin-top: 10px;
 }
 
 .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .section-title {
   font-weight: 700;
   font-size: 14px;
-  color: var(--color-text-secondary);
+  color: rgba(66, 80, 103, 0.78);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .section-actions {
@@ -395,38 +427,50 @@ const githubUrl =
 }
 
 .icon-button {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.18);
   cursor: pointer;
-  color: var(--color-text-tertiary);
+  color: rgba(66, 80, 103, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform var(--transition-base), background var(--transition-base), color var(--transition-base), box-shadow var(--transition-base);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+}
+
+.icon-button:hover:not(:disabled) {
+  background: rgba(10, 132, 255, 0.18);
+  color: var(--color-primary);
+  box-shadow: 0 18px 34px rgba(10, 132, 255, 0.18);
+  transform: translateY(-1px);
 }
 
 .icon-button:disabled {
-  opacity: 0.4;
+  opacity: 0.45;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .history-section {
-  margin-bottom: 28px;
+  margin-bottom: 32px;
 }
 
 .history-loading .skeleton {
-  height: 52px;
-  border-radius: 12px;
-  background: rgba(0, 0, 0, 0.04);
-  margin-bottom: 10px;
-  animation: pulse 1.2s ease-in-out infinite;
+  height: 54px;
+  border-radius: 16px;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.36) 50%, rgba(255, 255, 255, 0.12) 100%);
+  background-size: 200% 100%;
+  margin-bottom: 12px;
+  animation: shimmer 1.4s ease-in-out infinite;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+@keyframes shimmer {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
 }
 
 .history-list {
@@ -435,29 +479,42 @@ const githubUrl =
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   max-height: 320px;
   overflow-y: auto;
+  padding-right: 4px;
 }
 
 .history-item {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: var(--color-bg-secondary);
-  border-radius: 12px;
-  padding: 6px;
+  background: rgba(255, 255, 255, 0.26);
+  border-radius: 16px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base), background var(--transition-base);
+}
+
+.history-item:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.32);
+  box-shadow: 0 22px 46px rgba(15, 23, 42, 0.16);
 }
 
 .history-item.active {
-  border: 1px solid var(--color-primary-100);
-  background: rgba(102, 126, 234, 0.12);
+  background: rgba(120, 187, 255, 0.22);
+  border-color: rgba(10, 132, 255, 0.4);
+  box-shadow: 0 24px 52px rgba(10, 132, 255, 0.22);
 }
 
 .history-item.draft {
-  border: 1px dashed rgba(102, 126, 234, 0.4);
-  background: rgba(102, 126, 234, 0.08);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  border-style: dashed;
+  background: rgba(120, 187, 255, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.32);
 }
 
 .history-item.draft .history-title {
@@ -465,7 +522,7 @@ const githubUrl =
 }
 
 .history-item.draft .history-meta {
-  color: rgba(102, 126, 234, 0.8);
+  color: rgba(10, 132, 255, 0.9);
   font-style: italic;
 }
 
@@ -476,12 +533,16 @@ const githubUrl =
   align-items: flex-start;
   gap: 4px;
   padding: 0 8px;
-  background: transparent !important;
-  box-shadow: none !important;
   border: none;
+  background: transparent;
+  box-shadow: none;
   text-align: left;
   cursor: pointer;
   color: inherit;
+}
+
+.history-button:hover .history-title {
+  color: var(--color-primary);
 }
 
 .history-title {
@@ -492,43 +553,62 @@ const githubUrl =
 
 .history-meta {
   font-size: 12px;
-  color: var(--color-text-tertiary);
+  color: rgba(106, 116, 135, 0.8);
 }
 
 .delete-button {
-  height: 28px;
-  background: transparent;
-  border: none;
-  border-radius: 8px;
-  color: var(--color-text-tertiary);
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 10px;
+  color: rgba(66, 80, 103, 0.65);
   cursor: pointer;
   display: flex;
   align-items: center;
+  justify-content: center;
+  transition: background var(--transition-base), color var(--transition-base), transform var(--transition-base), box-shadow var(--transition-base);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
 }
 
+.delete-button:hover {
+  background: rgba(255, 69, 58, 0.12);
+  border-color: rgba(255, 69, 58, 0.28);
+  color: #ff453a;
+  transform: translateY(-1px);
+  box-shadow: 0 16px 30px rgba(255, 69, 58, 0.16);
+}
 
 .history-empty {
-  padding: 16px;
-  border-radius: 12px;
-  background: rgba(0, 0, 0, 0.03);
+  padding: 20px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.2);
   font-size: 13px;
-  color: var(--color-text-secondary);
+  color: rgba(66, 80, 103, 0.75);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
 }
 
 .store-error {
-  margin-top: 12px;
+  margin-top: 14px;
   font-size: 12px;
-  color: #d04747;
+  color: #ff453a;
+  background: rgba(255, 69, 58, 0.12);
+  border-radius: 10px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 69, 58, 0.22);
 }
 
 .knowledge-section {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .knowledge-desc {
   font-size: 13px;
-  color: var(--color-text-secondary);
-  margin-bottom: 12px;
+  color: rgba(66, 80, 103, 0.75);
+  margin-bottom: 14px;
 }
 
 .knowledge-links {
@@ -538,22 +618,30 @@ const githubUrl =
 }
 
 .knowledge-button {
-  height: 44px;
-  border-radius: 12px;
-  border: 1px solid var(--color-border-light);
-  background: #fff;
+  height: 46px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.24);
   cursor: pointer;
   font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  transition: transform var(--transition-base), box-shadow var(--transition-base), background var(--transition-base);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
 }
 
 .knowledge-button:hover {
-  border-color: var(--color-primary-100);
-  color: var(--color-primary);
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.34);
+  box-shadow: 0 24px 44px rgba(15, 23, 42, 0.18);
 }
 
 .knowledge-quick {
   font-size: 13px;
-  color: var(--color-text-secondary);
+  color: rgba(66, 80, 103, 0.78);
+  transition: color var(--transition-base);
 }
 
 .knowledge-quick:hover {
@@ -561,24 +649,30 @@ const githubUrl =
 }
 
 .sidebar-footer {
-  padding-top: 12px;
-  border-top: 1px solid var(--color-border-light);
+  padding-top: 16px;
+  margin-top: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
 }
 
 .user-info {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .avatar {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: var(--color-bg-secondary);
+  background: linear-gradient(135deg, rgba(10, 132, 255, 0.8) 0%, rgba(94, 231, 255, 0.6) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 16px 30px rgba(10, 132, 255, 0.28);
 }
 
 .user-meta {
@@ -594,7 +688,152 @@ const githubUrl =
 
 .user-tag {
   font-size: 12px;
-  color: var(--color-text-tertiary);
+  color: rgba(66, 80, 103, 0.7);
+}
+
+@media (prefers-color-scheme: dark) {
+  .side-nav::before {
+    background:
+      linear-gradient(160deg, rgba(148, 191, 255, 0.14) 0%, rgba(148, 191, 255, 0) 60%),
+      radial-gradient(60% 60% at 16% 24%, rgba(94, 231, 255, 0.24) 0%, rgba(94, 231, 255, 0) 75%);
+  }
+
+  .brand-link {
+    background: rgba(14, 26, 48, 0.62);
+    border-color: rgba(94, 129, 190, 0.32);
+    box-shadow: 0 20px 40px rgba(1, 7, 20, 0.75);
+  }
+
+  .brand-link:hover {
+    background: rgba(14, 26, 48, 0.74);
+    box-shadow: 0 28px 52px rgba(4, 12, 30, 0.85);
+  }
+
+  .brand-subtitle {
+    color: rgba(226, 232, 255, 0.6);
+  }
+
+  .nav-link {
+    background: rgba(14, 26, 48, 0.58);
+    border-color: rgba(94, 129, 190, 0.28);
+    color: rgba(226, 232, 255, 0.72);
+    box-shadow: 0 18px 36px rgba(2, 9, 24, 0.72);
+  }
+
+  .nav-link:hover:not(:disabled) {
+    background: rgba(14, 26, 48, 0.72);
+    color: #f4f8ff;
+    box-shadow: 0 24px 44px rgba(4, 12, 30, 0.8);
+  }
+
+  .nav-link.active {
+    background: rgba(90, 200, 255, 0.26);
+    border-color: rgba(94, 231, 255, 0.42);
+    box-shadow: 0 26px 52px rgba(90, 200, 255, 0.32);
+    color: #5ac8fa;
+  }
+
+  .section-title {
+    color: rgba(226, 232, 255, 0.65);
+  }
+
+  .icon-button {
+    background: rgba(14, 26, 48, 0.55);
+    border-color: rgba(94, 129, 190, 0.32);
+    color: rgba(226, 232, 255, 0.6);
+  }
+
+  .icon-button:hover:not(:disabled) {
+    background: rgba(14, 26, 48, 0.72);
+    color: #5ac8fa;
+    box-shadow: 0 20px 40px rgba(4, 12, 30, 0.78);
+  }
+
+  .history-item {
+    background: rgba(14, 26, 48, 0.62);
+    border-color: rgba(94, 129, 190, 0.32);
+    box-shadow: 0 20px 44px rgba(1, 8, 24, 0.78);
+  }
+
+  .history-item:hover {
+    box-shadow: 0 26px 52px rgba(1, 10, 28, 0.85);
+  }
+
+  .history-item.active {
+    background: rgba(90, 200, 255, 0.26);
+    border-color: rgba(94, 231, 255, 0.4);
+    color: #f4f8ff;
+  }
+
+  .history-item.draft {
+    background: rgba(90, 200, 255, 0.18);
+    border-color: rgba(94, 231, 255, 0.32);
+  }
+
+  .history-title {
+    color: #f4f8ff;
+  }
+
+  .history-meta {
+    color: rgba(226, 232, 255, 0.55);
+  }
+
+  .delete-button {
+    background: rgba(14, 26, 48, 0.55);
+    border-color: rgba(94, 129, 190, 0.3);
+    color: rgba(226, 232, 255, 0.6);
+  }
+
+  .delete-button:hover {
+    background: rgba(255, 69, 58, 0.18);
+    color: #ffd1cd;
+  }
+
+  .history-empty {
+    background: rgba(14, 26, 48, 0.58);
+    color: rgba(226, 232, 255, 0.7);
+    box-shadow: none;
+  }
+
+  .knowledge-desc {
+    color: rgba(226, 232, 255, 0.65);
+  }
+
+  .knowledge-button {
+    background: rgba(14, 26, 48, 0.6);
+    border-color: rgba(94, 129, 190, 0.3);
+    color: rgba(226, 232, 255, 0.78);
+    box-shadow: 0 20px 44px rgba(1, 8, 24, 0.75);
+  }
+
+  .knowledge-button:hover {
+    background: rgba(14, 26, 48, 0.74);
+    color: #5ac8fa;
+    border-color: rgba(94, 231, 255, 0.42);
+  }
+
+  .knowledge-quick {
+    color: rgba(226, 232, 255, 0.7);
+  }
+
+  .knowledge-quick:hover {
+    color: #5ac8fa;
+  }
+
+  .sidebar-footer {
+    border-top-color: rgba(94, 129, 190, 0.32);
+    background: rgba(14, 26, 48, 0.5);
+    box-shadow: inset 0 1px 0 rgba(94, 129, 190, 0.2);
+  }
+
+  .user-tag {
+    color: rgba(226, 232, 255, 0.6);
+  }
+
+  .avatar {
+    background: linear-gradient(135deg, rgba(94, 231, 255, 0.28) 0%, rgba(94, 92, 230, 0.32) 100%);
+    box-shadow: 0 18px 38px rgba(1, 8, 24, 0.75);
+  }
 }
 
 @media (max-width: 960px) {

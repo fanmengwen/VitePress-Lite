@@ -24,39 +24,55 @@
   
   /* === 颜色系统 === */
   /* 主色系 */
-  --color-primary: #007acc;
-  --color-primary-light: #4da6d9;
-  --color-primary-dark: #005fa3;
-  --color-primary-50: rgba(0, 122, 204, 0.05);
-  --color-primary-100: rgba(0, 122, 204, 0.1);
-  --color-primary-200: rgba(0, 122, 204, 0.2);
+  --color-primary: #0a84ff;
+  --color-primary-light: #5ac8fa;
+  --color-primary-dark: #0054d7;
+  --color-primary-50: rgba(10, 132, 255, 0.1);
+  --color-primary-100: rgba(10, 132, 255, 0.18);
+  --color-primary-200: rgba(10, 132, 255, 0.26);
   
   /* 语义色彩 */
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-error: #ef4444;
-  --color-danger: #ef4444;
-  --color-danger-bg: #fef2f2;
-  --color-danger-border: #fecaca;
-  --color-info: #3b82f6;
-  --color-text-accent: #6366f1;
+  --color-success: #30d158;
+  --color-warning: #ffd60a;
+  --color-error: #ff453a;
+  --color-danger: #ff453a;
+  --color-danger-bg: rgba(255, 69, 58, 0.06);
+  --color-danger-border: rgba(255, 69, 58, 0.28);
+  --color-info: #64d2ff;
+  --color-text-accent: #5e5ce6;
   
   /* 文本颜色 */
-  --color-text-primary: #1f2937;
-  --color-text-secondary: #6b7280;
-  --color-text-tertiary: #9ca3af;
+  --color-text-primary: #0a1528;
+  --color-text-secondary: #425067;
+  --color-text-tertiary: #6a7487;
   --color-text-inverse: #ffffff;
   
   /* 背景颜色 */
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f9fafb;
-  --color-bg-tertiary: #f3f4f6;
+  --color-bg-primary: #f4f7ff;
+  --color-bg-secondary: rgba(255, 255, 255, 0.78);
+  --color-bg-tertiary: rgba(255, 255, 255, 0.65);
   --color-bg-overlay: rgba(0, 0, 0, 0.5);
-  
+
   /* 边框颜色 */
-  --color-border-light: #f3f4f6;
-  --color-border-default: #e5e7eb;
-  --color-border-dark: #d1d5db;
+  --color-border-light: rgba(255, 255, 255, 0.6);
+  --color-border-default: rgba(12, 26, 57, 0.12);
+  --color-border-dark: rgba(12, 26, 57, 0.24);
+
+  /* === 液态玻璃表面 === */
+  --glass-panel-bg: rgba(255, 255, 255, 0.48);
+  --glass-panel-bg-strong: rgba(255, 255, 255, 0.64);
+  --glass-panel-border: rgba(255, 255, 255, 0.3);
+  --glass-panel-border-strong: rgba(12, 26, 57, 0.16);
+  --glass-panel-shadow: 0 28px 64px -30px rgba(15, 23, 42, 0.42);
+  --glass-blur: 26px;
+  --glass-highlight: rgba(120, 187, 255, 0.16);
+  --glass-sheen: rgba(255, 255, 255, 0.24);
+  --glow-primary: 0 20px 45px rgba(10, 132, 255, 0.28);
+  --glow-subtle: 0 18px 38px rgba(15, 23, 42, 0.16);
+  --surface-gradient: radial-gradient(140% 180% at 0% 0%, rgba(128, 176, 255, 0.35) 0%, rgba(128, 176, 255, 0) 58%),
+    radial-gradient(160% 160% at 100% 0%, rgba(90, 220, 255, 0.26) 0%, rgba(90, 220, 255, 0) 55%),
+    linear-gradient(168deg, #ecf3ff 0%, #f9fbff 54%, #eef4ff 100%);
+  --surface-gradient-dark: linear-gradient(165deg, #040a1a 0%, #081327 48%, #0f1f3f 100%);
   
   /* === 间距系统 === */
   --spacing-xs: 0.25rem;   /* 4px */
@@ -113,19 +129,30 @@
 /* Dark mode colors */
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-text-primary: #f9fafb;
-    --color-text-secondary: #d1d5db;
-    --color-text-tertiary: #9ca3af;
-    --color-text-inverse: #1f2937;
-    
-    --color-bg-primary: #111827;
-    --color-bg-secondary: #1f2937;
-    --color-bg-tertiary: #374151;
-    
-    --color-border-light: #374151;
-    --color-border-default: #4b5563;
-    --color-border-dark: #adb0b7;
-    --color-border-darker: #6b7280;
+    --color-text-primary: #f4f8ff;
+    --color-text-secondary: rgba(226, 232, 255, 0.72);
+    --color-text-tertiary: rgba(226, 232, 255, 0.52);
+    --color-text-inverse: #071020;
+
+    --color-bg-primary: #050b18;
+    --color-bg-secondary: rgba(10, 18, 35, 0.74);
+    --color-bg-tertiary: rgba(18, 32, 58, 0.6);
+
+    --color-border-light: rgba(148, 191, 255, 0.22);
+    --color-border-default: rgba(94, 129, 190, 0.32);
+    --color-border-dark: rgba(94, 129, 190, 0.5);
+    --color-border-darker: rgba(148, 191, 255, 0.65);
+
+    --glass-panel-bg: rgba(10, 18, 35, 0.6);
+    --glass-panel-bg-strong: rgba(14, 26, 48, 0.74);
+    --glass-panel-border: rgba(148, 191, 255, 0.28);
+    --glass-panel-border-strong: rgba(49, 99, 182, 0.42);
+    --glass-panel-shadow: 0 30px 58px -28px rgba(1, 8, 24, 0.75);
+    --glass-highlight: rgba(94, 231, 255, 0.2);
+    --glass-sheen: rgba(255, 255, 255, 0.1);
+    --glow-primary: 0 24px 52px rgba(94, 231, 255, 0.32);
+    --glow-subtle: 0 20px 46px rgba(1, 6, 18, 0.6);
+    --surface-gradient: var(--surface-gradient-dark);
   }
 }
 
