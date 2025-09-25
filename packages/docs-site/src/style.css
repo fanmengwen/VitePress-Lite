@@ -1,5 +1,7 @@
 /* 引入设计系统变量 */
 @import './styles/design-system.css';
+/* 共享组件样式 */
+@import './styles/components.css';
 
 /* 全局重置和基础样式 */
 *,

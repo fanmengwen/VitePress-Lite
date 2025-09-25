@@ -12,15 +12,15 @@
       </div>
 
       <nav class="nav-links">
-        <button class="nav-link" :class="{ active: isCreating }" :disabled="isCreating" @click="handleNewConversation">
+        <button class="nav-link btn btn-ghost" :class="{ active: isCreating }" :disabled="isCreating" @click="handleNewConversation">
           <span class="icon">💬</span>
           <span>{{ isCreating ? '创建中...' : '新建对话' }}</span>
         </button>
-        <router-link to="/kb" class="nav-link" :class="{ active: route.path.startsWith('/kb') }">
+        <router-link to="/kb" class="nav-link btn btn-ghost" :class="{ active: route.path.startsWith('/kb') }">
           <span class="icon">📚</span>
           <span>知识库</span>
         </router-link>
-        <a :href="githubUrl" class="nav-link" target="_blank" rel="noopener noreferrer">
+        <a :href="githubUrl" class="nav-link btn btn-ghost" target="_blank" rel="noopener noreferrer">
           <span class="icon">🌐</span>
           <span>GitHub 仓库</span>
         </a>
@@ -30,16 +30,16 @@
       <section class="history-section">
         <header class="section-header">
           <span class="section-title">历史对话</span>
-          <div class="section-actions">
-            <button
-              class="icon-button"
-              :disabled="loading && !hasConversations"
-              @click="handleRefresh"
-              title="刷新对话列表"
-            >
-              ⟳
-            </button>
-          </div>
+        <div class="section-actions">
+          <button
+            class="icon-btn"
+            :disabled="loading && !hasConversations"
+            @click="handleRefresh"
+            title="刷新对话列表"
+          >
+            ⟳
+          </button>
+        </div>
         </header>
 
         <div v-if="loading && !hasConversations" class="history-loading">
@@ -49,7 +49,7 @@
         <ul v-else-if="hasConversations || isDrafting" class="history-list">
           <li
             v-if="isDrafting"
-            class="history-item draft active"
+            class="history-item tile draft active"
           >
             <div class="history-button" @click="handleSelectDraft">
               <div class="history-title">新的对话</div>
@@ -59,7 +59,7 @@
           <li
             v-for="item in conversations"
             :key="item.id"
-            :class="['history-item', { active: route.path === '/' && item.id === activeConversationId }]"
+            :class="['history-item', 'tile', { active: route.path === '/' && item.id === activeConversationId, 'tile-active': route.path === '/' && item.id === activeConversationId }]"
           >
             <div class="history-button" @click="handleSelectConversation(item.id)">
               <div class="history-title" :title="item.title">
@@ -68,7 +68,7 @@
               <div class="history-meta">{{ formatUpdatedAt(item.updated_at) }}</div>
             </div>
             <button
-              class="delete-button"
+              class="icon-btn delete-button"
               title="删除对话"
               @click.stop="handleDeleteConversation(item.id)"
             >
@@ -249,40 +249,24 @@ const githubUrl =
 <style scoped>
 .side-nav {
   width: 280px;
-  padding: 22px 20px 16px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   height: 100vh;
   color: var(--color-text-primary);
-  background: linear-gradient(182deg, rgba(255, 255, 255, 0.52) 0%, rgba(255, 255, 255, 0.18) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.32);
-  border-radius: 22px;
-  backdrop-filter: saturate(160%) blur(calc(var(--glass-blur) - 6px));
-  -webkit-backdrop-filter: saturate(160%) blur(calc(var(--glass-blur) - 6px));
-  box-shadow: 0 26px 70px -28px rgba(12, 26, 57, 0.4);
   position: relative;
   overflow: hidden;
 }
 
-.side-nav::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(160deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0) 55%),
-    radial-gradient(70% 70% at 12% 16%, rgba(120, 187, 255, 0.24) 0%, rgba(120, 187, 255, 0) 70%);
-  pointer-events: none;
-  mix-blend-mode: screen;
-  opacity: 0.68;
-}
+.side-nav::before,
+.side-nav::after { content: none; }
 
 .sidebar-body {
   flex: 1;
   overflow-y: auto;
-  padding-right: 6px;
-  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
-  mask-image: linear-gradient(180deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+  padding: 24px 22px 18px;
+  backdrop-filter: inherit;
+  -webkit-backdrop-filter: inherit;
 }
 
 .brand-block {
@@ -298,36 +282,22 @@ const githubUrl =
   border-radius: 18px;
   color: inherit;
   text-decoration: none;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.22);
-  box-shadow: 0 18px 36px rgba(10, 132, 255, 0.18);
-  transition: transform var(--transition-base), box-shadow var(--transition-base), background var(--transition-base);
-  position: relative;
-  overflow: hidden;
+  transition: transform var(--transition-base);
 }
 
-.brand-link::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(120deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 55%);
-  opacity: 0;
-  transition: opacity var(--transition-base);
-}
+.brand-link::after { content: none; }
 
-.brand-link:hover {
-  transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.32);
-  box-shadow: 0 24px 48px rgba(10, 132, 255, 0.26);
-}
+.brand-link:hover { transform: translateY(-2px); }
 
 .brand-link:hover::after {
-  opacity: 1;
+  opacity: 0.6;
 }
 
 .brand-icon {
-  font-size: 28px;
-  text-shadow: 0 12px 34px rgba(10, 132, 255, 0.32);
+  font-size: 30px;
+  text-shadow:
+    0 18px 32px rgba(10, 132, 255, 0.32),
+    0 0 12px rgba(255, 255, 255, 0.4);
 }
 
 .brand-texts {
@@ -340,11 +310,12 @@ const githubUrl =
   font-weight: 800;
   font-size: 18px;
   letter-spacing: 0.01em;
+  color: rgba(24, 36, 56, 0.92);
 }
 
 .brand-subtitle {
   font-size: 12px;
-  color: rgba(66, 80, 103, 0.7);
+  color: rgba(45, 61, 91, 0.6);
 }
 
 .nav-links {
@@ -358,45 +329,32 @@ const githubUrl =
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 14px;
-  border-radius: 14px;
+  padding: 12px 40px;
+  border-radius: 16px;
   text-decoration: none;
-  color: rgba(66, 80, 103, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: rgba(255, 255, 255, 0.26);
   width: 100%;
   text-align: left;
-  cursor: pointer;
-  transition: transform var(--transition-base), box-shadow var(--transition-base), background var(--transition-base), color var(--transition-base), border-color var(--transition-base);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.16);
+  justify-content: flex-start;
 }
 
 .nav-link:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: progress;
+  box-shadow: none;
 }
 
 .nav-link:hover:not(:disabled) {
-  transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.34);
-  color: var(--color-text-primary);
-  border-color: rgba(255, 255, 255, 0.42);
-  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.2);
+  transform: translateY(-1px);
 }
 
-.nav-link.active {
-  background: rgba(120, 187, 255, 0.2);
-  color: var(--color-primary);
-  border-color: rgba(10, 132, 255, 0.38);
-  box-shadow: 0 28px 56px rgba(10, 132, 255, 0.22);
-}
+.nav-link.active { color: var(--color-primary); }
 
 .icon {
   width: 18px;
   text-align: center;
   font-size: 16px;
+  color: rgba(18, 36, 64, 0.6);
+  text-shadow: 0 6px 16px rgba(10, 132, 255, 0.18);
 }
 
 .action-error {
@@ -415,7 +373,7 @@ const githubUrl =
 .section-title {
   font-weight: 700;
   font-size: 14px;
-  color: rgba(66, 80, 103, 0.78);
+  color: rgba(34, 54, 84, 0.75);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -426,28 +384,9 @@ const githubUrl =
   gap: 6px;
 }
 
-.icon-button {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.32);
-  background: rgba(255, 255, 255, 0.18);
-  cursor: pointer;
-  color: rgba(66, 80, 103, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform var(--transition-base), background var(--transition-base), color var(--transition-base), box-shadow var(--transition-base);
-  backdrop-filter: blur(16px) saturate(150%);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
-}
+.icon-button { display: inline-flex; }
 
-.icon-button:hover:not(:disabled) {
-  background: rgba(10, 132, 255, 0.18);
-  color: var(--color-primary);
-  box-shadow: 0 18px 34px rgba(10, 132, 255, 0.18);
-  transform: translateY(-1px);
-}
+.icon-button:hover:not(:disabled) { transform: translateY(-1px); }
 
 .icon-button:disabled {
   opacity: 0.45;
@@ -489,32 +428,19 @@ const githubUrl =
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.26);
-  border-radius: 16px;
+  border-radius: 18px;
   padding: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.32);
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
-  backdrop-filter: blur(16px) saturate(150%);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
-  transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base), background var(--transition-base);
 }
 
-.history-item:hover {
-  transform: translateY(-1px);
-  background: rgba(255, 255, 255, 0.32);
-  box-shadow: 0 22px 46px rgba(15, 23, 42, 0.16);
-}
+.history-item:hover { transform: translateY(-1px); }
 
-.history-item.active {
-  background: rgba(120, 187, 255, 0.22);
-  border-color: rgba(10, 132, 255, 0.4);
-  box-shadow: 0 24px 52px rgba(10, 132, 255, 0.22);
-}
+.history-item.active { border-color: rgba(94, 200, 255, 0.52); }
 
 .history-item.draft {
   border-style: dashed;
-  background: rgba(120, 187, 255, 0.16);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.32);
+  background:
+    linear-gradient(155deg, rgba(132, 212, 255, 0.32) 0%, rgba(132, 212, 255, 0.12) 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
 }
 
 .history-item.draft .history-title {
@@ -548,47 +474,23 @@ const githubUrl =
 .history-title {
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: rgba(22, 40, 68, 0.9);
 }
 
 .history-meta {
   font-size: 12px;
-  color: rgba(106, 116, 135, 0.8);
+  color: rgba(62, 84, 120, 0.68);
 }
 
-.delete-button {
-  width: 32px;
-  height: 32px;
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  border-radius: 10px;
-  color: rgba(66, 80, 103, 0.65);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background var(--transition-base), color var(--transition-base), transform var(--transition-base), box-shadow var(--transition-base);
-  backdrop-filter: blur(16px) saturate(150%);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
-}
+.delete-button { width: 32px; height: 32px; }
 
-.delete-button:hover {
-  background: rgba(255, 69, 58, 0.12);
-  border-color: rgba(255, 69, 58, 0.28);
-  color: #ff453a;
-  transform: translateY(-1px);
-  box-shadow: 0 16px 30px rgba(255, 69, 58, 0.16);
-}
+.delete-button:hover { transform: translateY(-1px); }
 
 .history-empty {
   padding: 20px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.2);
   font-size: 13px;
-  color: rgba(66, 80, 103, 0.75);
-  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
-  backdrop-filter: blur(18px) saturate(150%);
-  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  color: rgba(36, 54, 84, 0.78);
 }
 
 .store-error {
@@ -607,7 +509,7 @@ const githubUrl =
 
 .knowledge-desc {
   font-size: 13px;
-  color: rgba(66, 80, 103, 0.75);
+  color: rgba(40, 60, 90, 0.7);
   margin-bottom: 14px;
 }
 
@@ -619,42 +521,28 @@ const githubUrl =
 
 .knowledge-button {
   height: 46px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.32);
-  background: rgba(255, 255, 255, 0.24);
-  cursor: pointer;
   font-size: 14px;
   font-weight: 500;
-  color: var(--color-text-primary);
-  transition: transform var(--transition-base), box-shadow var(--transition-base), background var(--transition-base);
-  backdrop-filter: blur(18px) saturate(150%);
-  -webkit-backdrop-filter: blur(18px) saturate(150%);
-  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
 }
 
-.knowledge-button:hover {
-  transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.34);
-  box-shadow: 0 24px 44px rgba(15, 23, 42, 0.18);
-}
+.knowledge-button:hover { transform: translateY(-1px); }
 
 .knowledge-quick {
   font-size: 13px;
-  color: rgba(66, 80, 103, 0.78);
-  transition: color var(--transition-base);
+  color: rgba(40, 60, 90, 0.7);
+  transition: color var(--transition-base), text-shadow var(--transition-base);
 }
 
 .knowledge-quick:hover {
   color: var(--color-primary);
+  text-shadow: 0 12px 24px rgba(10, 132, 255, 0.2);
 }
 
 .sidebar-footer {
   padding-top: 16px;
   margin-top: auto;
-  border-top: 1px solid rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(18px) saturate(150%);
-  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border-top: 1px solid rgba(255, 255, 255, 0.32);
+  padding: 18px 22px 20px;
 }
 
 .user-info {
@@ -667,12 +555,16 @@ const githubUrl =
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(10, 132, 255, 0.8) 0%, rgba(94, 231, 255, 0.6) 100%);
+  background:
+    linear-gradient(140deg, rgba(90, 200, 255, 0.85) 0%, rgba(255, 255, 255, 0.8) 70%),
+    radial-gradient(120% 140% at 30% 10%, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 60%);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
-  box-shadow: 0 16px 30px rgba(10, 132, 255, 0.28);
+  box-shadow:
+    0 18px 32px -18px rgba(10, 132, 255, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .user-meta {
@@ -684,136 +576,219 @@ const githubUrl =
 .user-name {
   font-size: 13px;
   font-weight: 600;
+  color: rgba(24, 38, 60, 0.92);
 }
 
 .user-tag {
   font-size: 12px;
-  color: rgba(66, 80, 103, 0.7);
+  color: rgba(60, 80, 112, 0.6);
 }
 
 @media (prefers-color-scheme: dark) {
+  .side-nav {
+    color: rgba(232, 240, 255, 0.88);
+    background:
+      radial-gradient(160% 130% at 0% 0%, rgba(41, 102, 179, 0.4) 0%, rgba(41, 102, 179, 0) 52%),
+      radial-gradient(120% 160% at 100% -10%, rgba(166, 98, 255, 0.28) 0%, rgba(166, 98, 255, 0) 58%),
+      linear-gradient(200deg, rgba(8, 18, 38, 0.92) 0%, rgba(8, 18, 38, 0.8) 100%);
+    border: 1px solid rgba(118, 190, 255, 0.26);
+    box-shadow:
+      0 42px 96px -36px rgba(0, 5, 20, 0.85),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
   .side-nav::before {
     background:
-      linear-gradient(160deg, rgba(148, 191, 255, 0.14) 0%, rgba(148, 191, 255, 0) 60%),
-      radial-gradient(60% 60% at 16% 24%, rgba(94, 231, 255, 0.24) 0%, rgba(94, 231, 255, 0) 75%);
+      linear-gradient(150deg, rgba(138, 199, 255, 0.2) 0%, rgba(138, 199, 255, 0) 55%),
+      radial-gradient(70% 65% at 18% 22%, rgba(77, 225, 255, 0.28) 0%, rgba(77, 225, 255, 0) 70%);
+    opacity: 0.7;
+  }
+
+  .side-nav::after {
+    background:
+      linear-gradient(220deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 55%),
+      radial-gradient(60% 75% at 85% 10%, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 68%);
+    opacity: 0.5;
   }
 
   .brand-link {
-    background: rgba(14, 26, 48, 0.62);
-    border-color: rgba(94, 129, 190, 0.32);
-    box-shadow: 0 20px 40px rgba(1, 7, 20, 0.75);
+    border-color: rgba(118, 190, 255, 0.28);
+    background:
+      linear-gradient(145deg, rgba(20, 42, 74, 0.82) 0%, rgba(20, 42, 74, 0.56) 100%),
+      radial-gradient(150% 160% at -15% 10%, rgba(68, 175, 255, 0.32) 0%, rgba(68, 175, 255, 0) 60%);
+    box-shadow:
+      0 30px 64px -28px rgba(0, 8, 28, 0.9),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 
   .brand-link:hover {
-    background: rgba(14, 26, 48, 0.74);
-    box-shadow: 0 28px 52px rgba(4, 12, 30, 0.85);
+    background:
+      linear-gradient(145deg, rgba(25, 48, 84, 0.92) 0%, rgba(25, 48, 84, 0.62) 100%),
+      radial-gradient(150% 160% at -15% 10%, rgba(68, 175, 255, 0.42) 0%, rgba(68, 175, 255, 0) 60%);
+    border-color: rgba(162, 222, 255, 0.42);
+    box-shadow:
+      0 40px 78px -30px rgba(0, 8, 28, 0.95),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  }
+
+  .brand-title {
+    color: rgba(240, 246, 255, 0.95);
   }
 
   .brand-subtitle {
-    color: rgba(226, 232, 255, 0.6);
+    color: rgba(210, 225, 255, 0.65);
+  }
+
+  .icon {
+    color: rgba(210, 225, 255, 0.65);
+    text-shadow: 0 10px 24px rgba(90, 200, 255, 0.35);
   }
 
   .nav-link {
-    background: rgba(14, 26, 48, 0.58);
-    border-color: rgba(94, 129, 190, 0.28);
-    color: rgba(226, 232, 255, 0.72);
-    box-shadow: 0 18px 36px rgba(2, 9, 24, 0.72);
+    color: rgba(223, 236, 255, 0.78);
+    border-color: rgba(118, 190, 255, 0.28);
+    background:
+      linear-gradient(160deg, rgba(21, 42, 75, 0.8) 0%, rgba(21, 42, 75, 0.52) 100%),
+      radial-gradient(140% 160% at 0% 0%, rgba(68, 175, 255, 0.28) 0%, rgba(68, 175, 255, 0) 68%);
+    box-shadow:
+      0 28px 54px -30px rgba(0, 10, 32, 0.85),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
 
   .nav-link:hover:not(:disabled) {
-    background: rgba(14, 26, 48, 0.72);
-    color: #f4f8ff;
-    box-shadow: 0 24px 44px rgba(4, 12, 30, 0.8);
+    color: rgba(255, 255, 255, 0.92);
+    border-color: rgba(162, 222, 255, 0.38);
+    background:
+      linear-gradient(160deg, rgba(28, 54, 90, 0.92) 0%, rgba(28, 54, 90, 0.6) 100%),
+      radial-gradient(140% 160% at 0% 0%, rgba(68, 175, 255, 0.38) 0%, rgba(68, 175, 255, 0) 68%);
+    box-shadow:
+      0 36px 70px -34px rgba(0, 10, 32, 0.95),
+      inset 0 1px 0 rgba(255, 255, 255, 0.14);
   }
 
   .nav-link.active {
-    background: rgba(90, 200, 255, 0.26);
-    border-color: rgba(94, 231, 255, 0.42);
-    box-shadow: 0 26px 52px rgba(90, 200, 255, 0.32);
     color: #5ac8fa;
+    border-color: rgba(120, 228, 255, 0.48);
+    background:
+      linear-gradient(170deg, rgba(36, 92, 140, 0.85) 0%, rgba(36, 92, 140, 0.55) 100%),
+      radial-gradient(150% 170% at 0% 0%, rgba(90, 200, 255, 0.38) 0%, rgba(90, 200, 255, 0) 65%);
+    box-shadow:
+      0 42px 86px -36px rgba(12, 70, 120, 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16);
   }
 
   .section-title {
-    color: rgba(226, 232, 255, 0.65);
+    color: rgba(210, 225, 255, 0.65);
   }
 
   .icon-button {
-    background: rgba(14, 26, 48, 0.55);
-    border-color: rgba(94, 129, 190, 0.32);
-    color: rgba(226, 232, 255, 0.6);
+    color: rgba(210, 225, 255, 0.68);
+    border-color: rgba(118, 190, 255, 0.26);
+    background:
+      linear-gradient(150deg, rgba(21, 42, 75, 0.82) 0%, rgba(21, 42, 75, 0.52) 100%),
+      radial-gradient(120% 130% at 0% 0%, rgba(68, 175, 255, 0.28) 0%, rgba(68, 175, 255, 0) 70%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
 
   .icon-button:hover:not(:disabled) {
-    background: rgba(14, 26, 48, 0.72);
     color: #5ac8fa;
-    box-shadow: 0 20px 40px rgba(4, 12, 30, 0.78);
+    border-color: rgba(162, 222, 255, 0.42);
+    background:
+      linear-gradient(150deg, rgba(28, 54, 90, 0.92) 0%, rgba(28, 54, 90, 0.62) 100%),
+      radial-gradient(120% 130% at 0% 0%, rgba(68, 175, 255, 0.42) 0%, rgba(68, 175, 255, 0) 70%);
+    box-shadow: 0 28px 56px -30px rgba(0, 10, 32, 0.9);
   }
 
   .history-item {
-    background: rgba(14, 26, 48, 0.62);
-    border-color: rgba(94, 129, 190, 0.32);
-    box-shadow: 0 20px 44px rgba(1, 8, 24, 0.78);
+    border-color: rgba(118, 190, 255, 0.28);
+    background:
+      linear-gradient(150deg, rgba(21, 44, 78, 0.85) 0%, rgba(21, 44, 78, 0.55) 100%),
+      radial-gradient(140% 160% at 0% 0%, rgba(68, 175, 255, 0.32) 0%, rgba(68, 175, 255, 0) 70%);
+    box-shadow:
+      0 34px 72px -34px rgba(0, 8, 28, 0.9),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
 
   .history-item:hover {
-    box-shadow: 0 26px 52px rgba(1, 10, 28, 0.85);
+    box-shadow:
+      0 42px 86px -36px rgba(0, 8, 28, 0.95),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
   }
 
   .history-item.active {
-    background: rgba(90, 200, 255, 0.26);
-    border-color: rgba(94, 231, 255, 0.4);
-    color: #f4f8ff;
+    border-color: rgba(120, 228, 255, 0.42);
+    background:
+      linear-gradient(165deg, rgba(32, 86, 133, 0.88) 0%, rgba(32, 86, 133, 0.58) 100%),
+      radial-gradient(150% 170% at 0% 0%, rgba(90, 200, 255, 0.4) 0%, rgba(90, 200, 255, 0) 68%);
+    box-shadow:
+      0 46px 92px -40px rgba(12, 70, 120, 0.62),
+      inset 0 1px 0 rgba(255, 255, 255, 0.14);
   }
 
   .history-item.draft {
-    background: rgba(90, 200, 255, 0.18);
-    border-color: rgba(94, 231, 255, 0.32);
+    background:
+      linear-gradient(160deg, rgba(32, 86, 133, 0.62) 0%, rgba(32, 86, 133, 0.38) 100%);
+    box-shadow: inset 0 0 0 1px rgba(120, 228, 255, 0.32);
   }
 
   .history-title {
-    color: #f4f8ff;
+    color: rgba(240, 246, 255, 0.92);
   }
 
   .history-meta {
-    color: rgba(226, 232, 255, 0.55);
+    color: rgba(198, 214, 255, 0.6);
   }
 
   .delete-button {
-    background: rgba(14, 26, 48, 0.55);
-    border-color: rgba(94, 129, 190, 0.3);
-    color: rgba(226, 232, 255, 0.6);
+    color: rgba(220, 232, 255, 0.72);
+    border-color: rgba(118, 190, 255, 0.26);
+    background:
+      linear-gradient(150deg, rgba(21, 42, 75, 0.82) 0%, rgba(21, 42, 75, 0.5) 100%),
+      radial-gradient(120% 140% at 0% 0%, rgba(68, 175, 255, 0.28) 0%, rgba(68, 175, 255, 0) 68%);
   }
 
   .delete-button:hover {
-    background: rgba(255, 69, 58, 0.18);
-    color: #ffd1cd;
+    background:
+      linear-gradient(150deg, rgba(255, 69, 58, 0.28) 0%, rgba(255, 69, 58, 0.16) 100%),
+      radial-gradient(120% 140% at 0% 0%, rgba(90, 200, 255, 0.22) 0%, rgba(90, 200, 255, 0) 68%);
+    color: rgba(255, 205, 198, 0.9);
+    border-color: rgba(255, 118, 109, 0.38);
   }
 
   .history-empty {
-    background: rgba(14, 26, 48, 0.58);
-    color: rgba(226, 232, 255, 0.7);
+    color: rgba(214, 226, 255, 0.68);
+    border-color: rgba(118, 190, 255, 0.24);
+    background:
+      linear-gradient(150deg, rgba(21, 42, 75, 0.82) 0%, rgba(21, 42, 75, 0.52) 100%),
+      radial-gradient(140% 150% at 12% 0%, rgba(68, 175, 255, 0.32) 0%, rgba(68, 175, 255, 0) 68%);
     box-shadow: none;
   }
 
   .knowledge-desc {
-    color: rgba(226, 232, 255, 0.65);
+    color: rgba(214, 226, 255, 0.65);
   }
 
   .knowledge-button {
-    background: rgba(14, 26, 48, 0.6);
-    border-color: rgba(94, 129, 190, 0.3);
-    color: rgba(226, 232, 255, 0.78);
-    box-shadow: 0 20px 44px rgba(1, 8, 24, 0.75);
+    color: rgba(220, 232, 255, 0.82);
+    border-color: rgba(118, 190, 255, 0.28);
+    background:
+      linear-gradient(155deg, rgba(21, 42, 75, 0.82) 0%, rgba(21, 42, 75, 0.5) 100%),
+      radial-gradient(130% 150% at 0% 0%, rgba(68, 175, 255, 0.32) 0%, rgba(68, 175, 255, 0) 70%);
+    box-shadow:
+      0 32px 64px -32px rgba(0, 10, 32, 0.9),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
 
   .knowledge-button:hover {
-    background: rgba(14, 26, 48, 0.74);
+    border-color: rgba(162, 222, 255, 0.38);
+    background:
+      linear-gradient(155deg, rgba(28, 54, 90, 0.92) 0%, rgba(28, 54, 90, 0.58) 100%),
+      radial-gradient(130% 150% at 0% 0%, rgba(68, 175, 255, 0.45) 0%, rgba(68, 175, 255, 0) 70%);
     color: #5ac8fa;
-    border-color: rgba(94, 231, 255, 0.42);
   }
 
   .knowledge-quick {
-    color: rgba(226, 232, 255, 0.7);
+    color: rgba(210, 225, 255, 0.68);
   }
 
   .knowledge-quick:hover {
@@ -821,18 +796,28 @@ const githubUrl =
   }
 
   .sidebar-footer {
-    border-top-color: rgba(94, 129, 190, 0.32);
-    background: rgba(14, 26, 48, 0.5);
-    box-shadow: inset 0 1px 0 rgba(94, 129, 190, 0.2);
-  }
-
-  .user-tag {
-    color: rgba(226, 232, 255, 0.6);
+    border-top-color: rgba(118, 190, 255, 0.3);
+    background:
+      linear-gradient(155deg, rgba(21, 42, 75, 0.8) 0%, rgba(21, 42, 75, 0.52) 100%),
+      radial-gradient(120% 150% at 0% 0%, rgba(68, 175, 255, 0.26) 0%, rgba(68, 175, 255, 0) 68%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
 
   .avatar {
-    background: linear-gradient(135deg, rgba(94, 231, 255, 0.28) 0%, rgba(94, 92, 230, 0.32) 100%);
-    box-shadow: 0 18px 38px rgba(1, 8, 24, 0.75);
+    background:
+      linear-gradient(145deg, rgba(90, 200, 255, 0.85) 0%, rgba(60, 110, 200, 0.82) 100%),
+      radial-gradient(130% 140% at 30% 10%, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 60%);
+    box-shadow:
+      0 24px 48px -22px rgba(0, 12, 32, 0.8),
+      inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  }
+
+  .user-name {
+    color: rgba(236, 244, 255, 0.9);
+  }
+
+  .user-tag {
+    color: rgba(192, 210, 255, 0.6);
   }
 }
 
