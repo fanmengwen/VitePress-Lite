@@ -3,7 +3,10 @@
     <SideNav />
     <main class="home-main">
       <!-- Fixed Question Title -->
-      <div v-if="showChat && chatRef?.currentQuestion" class="fixed-question-title">
+      <div
+        v-if="showChat && chatRef?.currentQuestion"
+        class="fixed-question-title glass-surface"
+      >
         <h1>{{ chatRef.currentQuestion }}</h1>
       </div>
       
@@ -222,6 +225,7 @@ const onAskQuick = async (q: string) => {
     border-color: rgba(94, 129, 190, 0.32);
     box-shadow: 0 32px 62px -28px rgba(1, 8, 24, 0.68);
   }
+
 }
 
 /* Fixed Question Title */
@@ -230,43 +234,102 @@ const onAskQuick = async (q: string) => {
   top: 0;
   left: 0;
   right: 0;
-  background: var(--color-bg-primary);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--color-border-light);
-  padding: 16px 24px;
-  z-index: 100;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: clamp(14px, 2.6vw, 22px) clamp(18px, 4vw, 32px);
+  background:
+    linear-gradient(156deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.36) 52%),
+    radial-gradient(100% 180% at 96% 4%, rgba(120, 187, 255, 0.32) 0%, rgba(120, 187, 255, 0) 38%);
+  border: 1px solid var(--glass-panel-border);
+  box-shadow:
+    0 28px 62px -30px rgba(12, 26, 57, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.48);
+  backdrop-filter: blur(calc(var(--glass-blur) - 8px)) saturate(182%);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) - 8px)) saturate(182%);
+  min-height: 68px;
   width: 100%;
   align-self: stretch;
   box-sizing: border-box;
+  z-index: var(--z-sticky, 1020);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.fixed-question-title::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(120deg, rgba(255, 255, 255, 0.46) 0%, rgba(255, 255, 255, 0.12) 22%, rgba(255, 255, 255, 0) 72%),
+    radial-gradient(90% 140% at 0% 0%, rgba(120, 187, 255, 0.24) 0%, rgba(120, 187, 255, 0) 68%);
+  pointer-events: none;
+  mix-blend-mode: screen;
 }
 
 .fixed-question-title h1 {
   margin: 0;
-  font-size: 20px;
-  font-weight: 700;
+  font-size: clamp(18px, 2.8vw, 16px);
   color: var(--color-text-primary);
+  font-weight: 700;
   text-align: left;
-  line-height: 1.3;
-  letter-spacing: -0.01em;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  background: linear-gradient(120deg, rgba(18, 36, 64, 0.98) 0%, rgba(28, 68, 120, 0.92) 26%, rgba(10, 132, 255, 0.95) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  text-shadow:
+    0 18px 34px rgba(10, 132, 255, 0.28),
+    0 2px 3px rgba(255, 255, 255, 0.72);
+}
+
+@media (prefers-color-scheme: dark) {
+  .fixed-question-title {
+    background:
+      linear-gradient(158deg, rgba(14, 26, 48, 0.86) 0%, rgba(14, 26, 48, 0.62) 78%),
+      radial-gradient(140% 190% at 92% 4%, rgba(94, 231, 255, 0.28) 0%, rgba(94, 231, 255, 0) 64%);
+    border-color: rgba(148, 191, 255, 0.28);
+    box-shadow:
+      0 34px 70px -32px rgba(0, 12, 32, 0.82),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  .fixed-question-title::before {
+    background:
+      linear-gradient(128deg, rgba(94, 231, 255, 0.3) 0%, rgba(94, 231, 255, 0.12) 46%, rgba(94, 231, 255, 0) 75%),
+      radial-gradient(90% 140% at 0% 0%, rgba(68, 175, 255, 0.32) 0%, rgba(68, 175, 255, 0) 72%);
+  }
+
+  .fixed-question-title h1 {
+    color: rgba(228, 238, 255, 0.92);
+    background: linear-gradient(120deg, rgba(228, 238, 255, 0.97) 0%, rgba(168, 212, 255, 0.94) 46%, rgba(120, 220, 255, 0.98) 100%);
+    text-shadow:
+      0 20px 36px rgba(10, 132, 255, 0.35),
+      0 1px 3px rgba(1, 8, 24, 0.65);
+  }
 }
 
 /* Adjust main content when fixed title is shown */
 .home-main:has(.fixed-question-title) .home-center {
-  margin-top: 0;
+  margin-top: 124px;
 }
 
 @media (max-width: 840px) {
   .home-viewport { flex-direction: column; }
   .home-main { height: auto; }
   
-  .fixed-question-title { padding: 12px 16px; }
-  
+  .fixed-question-title {
+    padding: 12px 18px;
+    gap: 10px;
+    min-height: 60px;
+  }
+
   .fixed-question-title h1 {
-    font-size: 18px;
+    font-size: clamp(16px, 5vw, 20px);
+    white-space: normal;
   }
   
   .home-main:has(.fixed-question-title) .home-center { margin-top: 0; padding-top: 0; }

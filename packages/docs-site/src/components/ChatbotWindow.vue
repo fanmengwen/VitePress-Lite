@@ -648,8 +648,19 @@ const toggleSources = () => {
 
 const scrollToBottom = async () => {
   await nextTick();
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
+  const container = messagesContainer.value;
+  if (!container) return;
+  const target = container.lastElementChild ?? container;
+
+  const performScroll = () => {
+    if (!target) return;
+    target.scrollIntoView({ block: 'end', inline: 'nearest' });
+  };
+
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(performScroll);
+  } else {
+    performScroll();
   }
 };
 
@@ -727,11 +738,26 @@ const loadHistory = () => {
 };
 
 // Watchers
-watch(messages, saveHistory, { deep: true });
+watch(
+  messages,
+  async () => {
+    saveHistory();
+    if (historyLoading.value) return;
+    await scrollToBottom();
+  },
+  { deep: true },
+);
+
+watch(historyLoading, async (loading) => {
+  if (!loading) {
+    await scrollToBottom();
+  }
+});
 
 // Lifecycle
-onMounted(() => {
+onMounted(async () => {
   loadHistory();
+  await scrollToBottom();
   // Health check on mount
   aiApiClient.checkHealth().catch(() => {
     hasError.value = true;
@@ -912,46 +938,26 @@ defineExpose({ ask, open, close, currentQuestion });
 
 /* Expanded State */
 .chatbot-expanded {
-  background: var(--lg-surface-main);
-  backdrop-filter: blur(calc(var(--lg-blur) + 2px)) saturate(185%);
-  -webkit-backdrop-filter: blur(calc(var(--lg-blur) + 2px)) saturate(185%);
-  border-radius: 26px;
+
   width: 400px;
   height: 600px;
   display: flex;
   flex-direction: column;
-  box-shadow:
-    var(--lg-shadow-outer),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
-  border: 1px solid var(--lg-border);
+
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
-.chatbot-expanded::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: var(--lg-highlight-overlay);
-  pointer-events: none;
-  mix-blend-mode: screen;
-  opacity: 0.85;
-}
 
 /* Inline mode seamless styling */
 .chatbot-window.inline-mode .chatbot-expanded {
-  background: var(--lg-surface-main);
-  backdrop-filter: blur(calc(var(--lg-blur) - 6px)) saturate(170%);
-  -webkit-backdrop-filter: blur(calc(var(--lg-blur) - 6px)) saturate(170%);
+ 
   border-radius: 28px;
-  box-shadow:
-    0 32px 68px -32px rgba(16, 32, 61, 0.48),
-    inset 0 1px 0 rgba(255, 255, 255, 0.32);
-  border: 1px solid rgba(255, 255, 255, 0.26);
+
   width: 100%;
   height: auto;
   min-height: 480px;
-  max-height: 78vh;
+  max-height: none;
   margin: 0;
   padding: 12px 0 24px;
 }
@@ -1787,10 +1793,6 @@ defineExpose({ ask, open, close, currentQuestion });
   z-index: 50;
   max-width: 100%;
   margin: 0 24px;
-}
-
-.input-form {
-  margin-bottom: 0.75rem;
 }
 
 .input-group {

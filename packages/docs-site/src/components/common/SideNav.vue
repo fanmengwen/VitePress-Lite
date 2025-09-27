@@ -263,7 +263,6 @@ const githubUrl =
 
 .sidebar-body {
   flex: 1;
-  overflow-y: auto;
   padding: 24px 22px 18px;
   backdrop-filter: inherit;
   -webkit-backdrop-filter: inherit;
