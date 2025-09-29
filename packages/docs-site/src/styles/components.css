@@ -1,0 +1,139 @@
+/* Shared component/util styles for glass UI and buttons */
+
+/* Glass surface base */
+.glass-surface {
+  border: 1px solid var(--glass-panel-border);
+  background: var(--glass-panel-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  box-shadow: var(--glass-panel-shadow);
+}
+
+/* Elevation helpers */
+.elev-0 { box-shadow: none; }
+.elev-1 { box-shadow: var(--shadow-sm); }
+.elev-2 { box-shadow: var(--shadow-md); }
+.elev-3 { box-shadow: var(--shadow-lg); }
+.elev-4 { box-shadow: var(--shadow-xl); }
+
+/* Rounded helpers */
+.rounded-md { border-radius: var(--radius-md); }
+.rounded-lg { border-radius: var(--radius-lg); }
+.rounded-xl { border-radius: var(--radius-xl); }
+.rounded-2xl { border-radius: var(--radius-2xl); }
+.rounded-full { border-radius: var(--radius-full); }
+
+/* Button primitives */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border: 1px solid var(--glass-panel-border-strong);
+  border-radius: var(--radius-2xl);
+  font: 500 var(--font-size-base) var(--font-family-sans);
+  line-height: 1.25;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  background: linear-gradient(135deg, rgba(255,255,255,0.42) 0%, rgba(255,255,255,0.12) 100%);
+  color: var(--color-text-primary);
+  transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base), color var(--transition-base), opacity var(--transition-fast);
+  will-change: transform, box-shadow;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Button variants */
+.btn-ghost {
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.36) 0%, rgba(255, 255, 255, 0.14) 100%);
+  border-color: var(--glass-panel-border);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, rgba(10, 132, 255, 0.95) 0%, rgba(90, 200, 250, 0.9) 100%);
+  color: var(--color-text-inverse);
+  box-shadow: var(--glow-primary);
+}
+
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 18px 42px rgba(10, 132, 255, 0.28);
+}
+
+/* Icon button */
+.icon-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--glass-panel-border);
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.36) 0%, rgba(255, 255, 255, 0.08) 100%);
+  color: var(--color-text-secondary);
+  transition: transform var(--transition-base), color var(--transition-base), border-color var(--transition-base), box-shadow var(--transition-base);
+  will-change: transform, box-shadow;
+}
+
+.icon-btn:hover:not(:disabled) {
+  color: var(--color-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* List item tile */
+.tile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--glass-panel-border);
+  border-radius: var(--radius-2xl);
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.12) 100%);
+  transition: transform var(--transition-base), border-color var(--transition-base), box-shadow var(--transition-base), background var(--transition-base);
+  will-change: transform, box-shadow;
+}
+
+.tile:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.tile-active {
+  border-color: rgba(94, 200, 255, 0.52);
+  background: linear-gradient(160deg, rgba(132, 212, 255, 0.45) 0%, rgba(132, 212, 255, 0.18) 100%);
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  .btn, .icon-btn, .tile { transition: none; }
+}
+
+/* Dark mode tweaks */
+@media (prefers-color-scheme: dark) {
+  .btn-ghost { border-color: var(--glass-panel-border); }
+  .tile { border-color: var(--glass-panel-border); }
+}
+
+
