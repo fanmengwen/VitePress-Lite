@@ -3,7 +3,7 @@ RAG (Retrieval-Augmented Generation) pipeline service.
 Combine vector search, context building, and LLM generation into a cohesive flow.
 """
 
-from typing import List, Dict, Any, Tuple, Optional
+from typing import List, Dict, Any, Tuple, Optional, AsyncGenerator
 import time
 from loguru import logger
 
@@ -68,49 +68,10 @@ class RAGPipeline:
             context = self._build_context(relevant_chunks)
 
             # Prefer persisted history when conversation_id is provided
-            persisted_messages: List[ChatMessage] = []
-            active_conversation_id: Optional[str] = None
-
-            if request.conversation_id:
-                try:
-                    existing_conversation = await conversation_store.get_conversation(
-                        request.conversation_id
-                    )
-                except Exception as exc:
-                    logger.warning(
-                        "Failed to load conversation {}: {}",
-                        request.conversation_id,
-                        exc,
-                    )
-                    existing_conversation = None
-
-                if existing_conversation:
-                    active_conversation_id = existing_conversation.id
-                    try:
-                        # fetch last N messages from conversation store
-                        raw_msgs = await conversation_store.get_messages(
-                            existing_conversation.id, limit=10
-                        )
-                        for m in raw_msgs:
-                            persisted_messages.append(
-                                ChatMessage(
-                                    role=m.role,
-                                    content=m.content,
-                                    timestamp=m.created_at,
-                                )
-                            )
-                    except Exception as exc:
-                        logger.warning(
-                            "Failed to load messages for conversation {}: {}",
-                            request.conversation_id,
-                            exc,
-                        )
-                        persisted_messages = []
-                else:
-                    logger.info(
-                        "Conversation {} not found; a new conversation will be created.",
-                        request.conversation_id,
-                    )
+            (
+                persisted_messages,
+                active_conversation_id,
+            ) = await self._load_conversation_context(request.conversation_id)
 
             effective_history = (
                 persisted_messages if persisted_messages else (request.history or [])
@@ -190,6 +151,132 @@ class RAGPipeline:
         except Exception as e:
             logger.error(f"RAG pipeline failed: {e}")
             return self._create_error_response(request, str(e), start_time)
+
+    async def stream_chat(
+        self, request: ChatRequest
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """Stream chat response chunks for progressive rendering."""
+
+        start_time = time.time()
+
+        try:
+            logger.info("Streaming chat request: {}...", request.question[:80])
+
+            yield {"type": "stage", "stage": "retrieve"}
+
+            relevant_chunks = await self._retrieve_documents(
+                request.question,
+                top_k=settings.retrieval_top_k,
+            )
+
+            if not relevant_chunks:
+                response = self._create_no_context_response(request, start_time)
+                payload = response.model_dump()
+                payload["type"] = "final"
+                payload["stage"] = "done"
+                yield payload
+                return
+
+            context = self._build_context(relevant_chunks)
+
+            (
+                persisted_messages,
+                active_conversation_id,
+            ) = await self._load_conversation_context(request.conversation_id)
+
+            effective_history = (
+                persisted_messages if persisted_messages else (request.history or [])
+            )
+            history = self._build_history(effective_history)
+
+            system_prompt = self.system_prompt_template.format(
+                context=context, history=history
+            )
+
+            messages_payload = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": request.question},
+            ]
+
+            sources: List[SourceReference] = []
+            if request.include_sources:
+                sources = self._create_source_references(relevant_chunks)
+                yield {
+                    "type": "sources",
+                    "stage": "retrieve",
+                    "sources": [s.model_dump() for s in sources],
+                }
+
+            yield {"type": "stage", "stage": "generate"}
+
+            token_buffer: List[str] = []
+            async for token in llm_service.stream_response(
+                messages=messages_payload,
+                max_tokens=request.max_tokens,
+                temperature=request.temperature,
+            ):
+                if not token:
+                    continue
+                token_buffer.append(token)
+                yield {"type": "token", "token": token}
+
+            answer = "".join(token_buffer)
+
+            response_time_ms = int((time.time() - start_time) * 1000)
+            confidence_score = self._calculate_confidence_score(
+                relevant_chunks, answer
+            )
+
+            final_sources = sources if request.include_sources else []
+
+            final_response = ChatResponse(
+                answer=answer,
+                sources=final_sources,
+                confidence_score=confidence_score,
+                response_time_ms=response_time_ms,
+                tokens_used=None,
+                conversation_id=active_conversation_id,
+            )
+
+            conversation_id = active_conversation_id
+            try:
+                conversation_id = await self._ensure_conversation_exists(
+                    conversation_id, request.question
+                )
+                await conversation_store.append_message(
+                    conversation_id,
+                    role="user",
+                    content=request.question,
+                )
+                await conversation_store.append_message(
+                    conversation_id,
+                    role="assistant",
+                    content=answer,
+                    metadata={
+                        "sources": [s.model_dump() for s in final_sources]
+                    }
+                    if final_sources
+                    else None,
+                )
+                final_response.conversation_id = conversation_id
+            except Exception as exc:
+                logger.warning(
+                    "Failed to persist conversation {}: {}",
+                    conversation_id,
+                    exc,
+                )
+
+            payload = final_response.model_dump()
+            payload["type"] = "final"
+            payload["stage"] = "done"
+            yield payload
+
+        except Exception as exc:
+            logger.error(f"Streaming RAG pipeline failed: {exc}")
+            yield {
+                "type": "error",
+                "message": str(exc),
+            }
 
     async def _retrieve_documents(
         self, query: str,
@@ -357,6 +444,58 @@ Relevance: {score:.2f}
         title = (question or "").strip()[:50] or "New conversation"
         conv = await conversation_store.create_conversation(title=title)
         return conv.id
+
+    async def _load_conversation_context(
+        self, conversation_id: Optional[str]
+    ) -> Tuple[List[ChatMessage], Optional[str]]:
+        """Load persisted conversation history and return messages with active id."""
+
+        persisted_messages: List[ChatMessage] = []
+        active_conversation_id: Optional[str] = None
+
+        if not conversation_id:
+            return persisted_messages, active_conversation_id
+
+        try:
+            existing_conversation = await conversation_store.get_conversation(
+                conversation_id
+            )
+        except Exception as exc:
+            logger.warning(
+                "Failed to load conversation {}: {}",
+                conversation_id,
+                exc,
+            )
+            existing_conversation = None
+
+        if existing_conversation:
+            active_conversation_id = existing_conversation.id
+            try:
+                raw_msgs = await conversation_store.get_messages(
+                    existing_conversation.id, limit=10
+                )
+                for msg in raw_msgs:
+                    persisted_messages.append(
+                        ChatMessage(
+                            role=msg.role,
+                            content=msg.content,
+                            timestamp=msg.created_at,
+                        )
+                    )
+            except Exception as exc:
+                logger.warning(
+                    "Failed to load messages for conversation {}: {}",
+                    conversation_id,
+                    exc,
+                )
+                persisted_messages = []
+        else:
+            logger.info(
+                "Conversation {} not found; a new conversation will be created.",
+                conversation_id,
+            )
+
+        return persisted_messages, active_conversation_id
 
     def _create_no_context_response(
         self, request: ChatRequest, start_time: float

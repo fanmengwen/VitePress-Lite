@@ -39,6 +39,15 @@ export interface ChatResponse {
   conversation_id?: string;
 }
 
+export type ChatStage = 'retrieve' | 'generate' | 'done';
+
+export type ChatStreamEvent =
+  | { type: 'stage'; stage: ChatStage }
+  | { type: 'sources'; stage?: ChatStage; sources: SourceReference[] }
+  | { type: 'token'; token: string }
+  | ({ type: 'final'; stage: ChatStage } & ChatResponse)
+  | { type: 'error'; message: string };
+
 export interface AIHealthResponse {
   status: 'healthy' | 'degraded' | 'unhealthy';
   timestamp: string;
@@ -139,6 +148,92 @@ class AIApiClient {
       }
       throw error;
     }
+  }
+
+  /**
+   * Stream a chat request for progressive rendering
+   */
+  async chatStream(
+    request: ChatRequest,
+    onEvent?: (event: ChatStreamEvent) => void | Promise<void>,
+  ): Promise<ChatResponse> {
+    const response = await fetch(`${this.baseURL}/chat/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        question: request.question,
+        conversation_id: request.conversation_id,
+        history: request.history || [],
+        max_tokens: request.max_tokens,
+        temperature: request.temperature,
+        include_sources: request.include_sources ?? true,
+      }),
+    });
+
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(`AI chat stream failed: ${message || response.statusText}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('Browser does not support streaming responses.');
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let finalPayload: ChatResponse | null = null;
+
+    const processLine = async (line: string) => {
+      if (!line) return;
+      try {
+        const parsed = JSON.parse(line) as ChatStreamEvent;
+        if (onEvent) {
+          await onEvent(parsed);
+        }
+        if (parsed.type === 'error') {
+          throw new Error(parsed.message);
+        }
+        if (parsed.type === 'final') {
+          const { type, stage, ...rest } = parsed;
+          finalPayload = rest as ChatResponse;
+        }
+      } catch (error) {
+        if (error instanceof SyntaxError) {
+          console.warn('Failed to parse chat stream chunk:', line);
+          return;
+        }
+        throw error;
+      }
+    };
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      let newlineIndex = buffer.indexOf('\n');
+      while (newlineIndex !== -1) {
+        const line = buffer.slice(0, newlineIndex).trim();
+        buffer = buffer.slice(newlineIndex + 1);
+        await processLine(line);
+        newlineIndex = buffer.indexOf('\n');
+      }
+    }
+
+    buffer += decoder.decode();
+    const remaining = buffer.trim();
+    if (remaining) {
+      await processLine(remaining);
+    }
+
+    if (!finalPayload) {
+      throw new Error('Chat stream ended without final response.');
+    }
+
+    return finalPayload;
   }
 
   /**

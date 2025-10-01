@@ -41,3 +41,5 @@ repomix-*
 .cursorindexingignore
 packages/ai-service/.python-version
 .python-version
+
+AGENTS.md
