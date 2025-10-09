@@ -558,6 +558,8 @@ const sendMessage = async () => {
   if (messages.value.length > props.maxMessages) {
     messages.value.splice(0, messages.value.length - props.maxMessages);
   }
+  // Always work with the reactive proxy stored in the array (not the raw object)
+  const aiMessageIndex = messages.value.length - 1;
   await scrollToBottom();
 
   try {
@@ -568,6 +570,8 @@ const sendMessage = async () => {
         case 'stage':
           progress.value.stage = event.stage;
           if (event.stage === 'generate') {
+            // Hide retrieval banner once generation starts to keep focus on the streaming answer
+            showRetrievalBanner.value = false;
             isStreaming.value = true;
             isLoading.value = false;
           }
@@ -578,11 +582,15 @@ const sendMessage = async () => {
         case 'sources':
           if (showSources.value) {
             retrievalPreviewSources.value = event.sources || [];
-            aiMessage.sources = event.sources || [];
+            if (messages.value[aiMessageIndex]) {
+              messages.value[aiMessageIndex].sources = event.sources || [];
+            }
           }
           break;
         case 'token':
-          aiMessage.content += event.token;
+          if (messages.value[aiMessageIndex]) {
+            messages.value[aiMessageIndex].content += event.token;
+          }
           if (!isStreaming.value) {
             isStreaming.value = true;
             isLoading.value = false;
@@ -609,13 +617,19 @@ const sendMessage = async () => {
       handleStreamEvent,
     );
 
-    aiMessage.content = response.answer;
+    if (messages.value[aiMessageIndex]) {
+      messages.value[aiMessageIndex].content = response.answer;
+    }
     if (showSources.value) {
-      aiMessage.sources = response.sources?.length
-        ? response.sources
-        : aiMessage.sources || [];
+      if (messages.value[aiMessageIndex]) {
+        messages.value[aiMessageIndex].sources = response.sources?.length
+          ? response.sources
+          : (messages.value[aiMessageIndex].sources || []);
+      }
     } else {
-      aiMessage.sources = [];
+      if (messages.value[aiMessageIndex]) {
+        messages.value[aiMessageIndex].sources = [];
+      }
     }
 
     const resolvedConversationId = response.conversation_id || conversationId;
@@ -642,11 +656,8 @@ const sendMessage = async () => {
     hasError.value = true;
     errorMessage.value = getAIErrorMessage(error);
     console.error('AI chat stream error:', error);
-    if (!aiMessage.content) {
-      const index = messages.value.indexOf(aiMessage);
-      if (index !== -1) {
-        messages.value.splice(index, 1);
-      }
+    if (!messages.value[aiMessageIndex]?.content) {
+      messages.value.splice(aiMessageIndex, 1);
     }
   } finally {
     if (progress.value.stage !== 'done') {
@@ -1392,6 +1403,7 @@ defineExpose({ ask, open, close, currentQuestion });
   font-size: 17px;
   line-height: 1.82;
   width: 100%;
+  min-height: 50px;
 }
 .chatbot-window.inline-mode .user-message .message-text {
   background: var(--lg-user-bubble);
@@ -1491,6 +1503,8 @@ defineExpose({ ask, open, close, currentQuestion });
   font-weight: 600;
   line-height: 1.3;
   display: -webkit-box;
+  /* add standard line-clamp for compatibility per linter suggestion */
+  line-clamp: 2;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
@@ -2145,6 +2159,7 @@ defineExpose({ ask, open, close, currentQuestion });
 .message-text :deep(.list-item.numbered) {
   counter-increment: list-counter;
   position: relative;
+  left: 16px;
 }
 
 .message-text :deep(.list-item.numbered)::before {
