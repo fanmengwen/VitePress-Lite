@@ -2,15 +2,20 @@
 Chat and vector search endpoints.
 """
 
+import json
 import time
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from loguru import logger
 
-from ai_service.config.settings import settings
-from ai_service.models.chat import ChatRequest, ChatResponse, VectorSearchRequest, VectorSearchResponse
+from ai_service.models.chat import (
+    ChatRequest,
+    ChatResponse,
+    VectorSearchRequest,
+    VectorSearchResponse,
+)
 from ai_service.services.rag import rag_pipeline
-from .dependencies import verify_api_key
 
 router = APIRouter()
 
@@ -69,3 +74,22 @@ async def vector_search(request: VectorSearchRequest) -> VectorSearchResponse:
     except Exception as e:
         logger.error(f"Vector search failed: {e}")
         return VectorSearchResponse(sources=[], took_ms=int((time.time() - start) * 1000))
+
+
+@router.post("/chat/stream")
+async def chat_stream(request: ChatRequest) -> StreamingResponse:
+    """Stream chat response chunks for progressive UI."""
+
+    if not request.question.strip():
+        raise HTTPException(status_code=400, detail="Question cannot be empty")
+
+    async def event_generator():
+        async for event in rag_pipeline.stream_chat(request):
+            yield json.dumps(event, ensure_ascii=False) + "\n"
+
+    headers = {"Cache-Control": "no-cache"}
+    return StreamingResponse(
+        event_generator(),
+        media_type="application/x-ndjson",
+        headers=headers,
+    )

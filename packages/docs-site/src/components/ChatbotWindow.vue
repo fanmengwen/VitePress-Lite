@@ -3,7 +3,7 @@
     class="chatbot-window" 
     :class="{ 
       'expanded': isExpanded, 
-      'loading': isLoading,
+      'loading': isBusy,
       'error': hasError,
       'inline-mode': inline
     }"
@@ -123,7 +123,7 @@
           <!-- Retrieval status & preview -->
           <transition name="fade-slide">
             <div 
-              v-if="isLoading && showRetrievalBanner && (progress.stage === 'retrieve' || progress.stage === 'generate')"
+              v-if="isBusy && showRetrievalBanner && (progress.stage === 'retrieve' || progress.stage === 'generate')"
               class="retrieval-status"
             >
               <div class="retrieval-banner">
@@ -196,17 +196,17 @@
               class="message-input"
               placeholder="输入你的问题..."
               rows="1"
-              :disabled="isLoading"
+              :disabled="isBusy"
               @keydown="handleKeydown"
               @input="autoResizeTextarea"
             ></textarea>
             <button 
               type="submit" 
               class="send-btn"
-              :disabled="!currentInput.trim() || isLoading"
+              :disabled="!currentInput.trim() || isBusy"
               aria-label="发送消息"
             >
-              {{ isLoading ? '⏳' : '📤' }}
+              {{ isBusy ? '⏳' : '📤' }}
             </button>
           </div>
         </form>
@@ -218,7 +218,7 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { aiApiClient, type ChatMessage, type ChatResponse, type SourceReference, type ConversationDetail, getAIErrorMessage } from '@/api/ai';
+import { aiApiClient, type ChatMessage, type ChatResponse, type SourceReference, type ConversationDetail, type ChatStreamEvent, getAIErrorMessage } from '@/api/ai';
 import { useConversations } from '@/composables/useConversations';
 
 // Props
@@ -261,6 +261,7 @@ const {
 // Reactive state
 const isExpanded = ref(props.autoExpand);
 const isLoading = ref(false);
+const isStreaming = ref(false);
 const hasError = ref(false);
 const errorMessage = ref('');
 const currentInput = ref('');
@@ -275,6 +276,8 @@ const currentConversationId = ref<string | null>(props.conversationId ?? null);
 const historyLoading = ref(false);
 const historyError = ref('');
 const hasRenamedCurrentConversation = ref(false);
+
+const isBusy = computed(() => isLoading.value || isStreaming.value);
 
 // Refs for DOM elements
 const messagesContainer = ref<HTMLElement | null>(null);
@@ -291,7 +294,7 @@ const suggestedQuestions = [
 // Connection status
 const connectionStatus = computed(() => {
   if (hasError.value) return '连接异常';
-  if (isLoading.value) return '处理中...';
+  if (isBusy.value) return '处理中...';
   return '在线';
 });
 
@@ -498,14 +501,18 @@ watch(
 
 const sendMessage = async () => {
   const question = currentInput.value.trim();
-  if (!question || isLoading.value) return;
+  if (!question || isBusy.value) return;
 
   lastQuestion.value = question;
   currentQuestion.value = question;
   currentInput.value = '';
   isLoading.value = true;
+  isStreaming.value = false;
   hasError.value = false;
   errorMessage.value = '';
+  progress.value.stage = '';
+  showRetrievalBanner.value = false;
+  retrievalPreviewSources.value = [];
 
   let conversationId: string | null = null;
   try {
@@ -520,7 +527,6 @@ const sendMessage = async () => {
     currentConversationId.value = conversationId;
   }
 
-  // Add user message
   const userMessage: ChatMessage = {
     role: 'user',
     content: question,
@@ -530,60 +536,102 @@ const sendMessage = async () => {
   if (messages.value.length > props.maxMessages) {
     messages.value.splice(0, messages.value.length - props.maxMessages);
   }
-  // Move conversation to top only when user actually sends a message
   if (conversationId) {
     markActivity(conversationId, userMessage.timestamp);
   }
+
+  await scrollToBottom();
+
+  const history = messages.value.slice(-10).map((msg) => ({
+    role: msg.role,
+    content: msg.content,
+    timestamp: msg.timestamp,
+  }));
+
+  const aiMessage = {
+    role: 'assistant' as const,
+    content: '',
+    timestamp: new Date().toISOString(),
+    sources: showSources.value ? ([] as SourceReference[]) : undefined,
+  };
+  messages.value.push(aiMessage);
+  if (messages.value.length > props.maxMessages) {
+    messages.value.splice(0, messages.value.length - props.maxMessages);
+  }
+  // Always work with the reactive proxy stored in the array (not the raw object)
+  const aiMessageIndex = messages.value.length - 1;
   await scrollToBottom();
 
   try {
-    progress.value.stage = 'retrieve';
-    // 1) vector search first: show sources immediately when available
-    let retrievedSources: SourceReference[] = [];
-    try {
-      const vs = await aiApiClient.vectorSearch({ query: question, top_k: 3 });
-      retrievedSources = vs.sources || [];
-    } catch (_) {
-      // ignore vector search failure; proceed to chat
-    }
-
-    // Prepare chat history
-    const history = messages.value.slice(-10).map(msg => ({
-      role: msg.role,
-      content: msg.content,
-      timestamp: msg.timestamp,
-    }));
-
-    // Present a retrieval banner instead of inserting a staged message
     showRetrievalBanner.value = true;
-    retrievalPreviewSources.value = showSources.value ? retrievedSources : [];
 
-    progress.value.stage = 'generate';
-    // 2) call AI to generate the final answer
-    const response: ChatResponse = await aiApiClient.chat({
-      question,
-      history,
-      include_sources: showSources.value,
-      temperature: 0.1,
-      conversation_id: conversationId ?? undefined,
-    });
-
-    // Merge sources (vector-search + final)
-    const mergedSources = (response.sources && response.sources.length > 0)
-      ? response.sources
-      : retrievedSources;
-
-    // 3) push final AI message with sources
-    const aiMessage = {
-      role: 'assistant' as const,
-      content: response.answer,
-      timestamp: new Date().toISOString(),
-      sources: mergedSources,
+    const handleStreamEvent = async (event: ChatStreamEvent) => {
+      switch (event.type) {
+        case 'stage':
+          progress.value.stage = event.stage;
+          if (event.stage === 'generate') {
+            // Hide retrieval banner once generation starts to keep focus on the streaming answer
+            showRetrievalBanner.value = false;
+            isStreaming.value = true;
+            isLoading.value = false;
+          }
+          if (event.stage === 'done') {
+            showRetrievalBanner.value = false;
+          }
+          break;
+        case 'sources':
+          if (showSources.value) {
+            retrievalPreviewSources.value = event.sources || [];
+            if (messages.value[aiMessageIndex]) {
+              messages.value[aiMessageIndex].sources = event.sources || [];
+            }
+          }
+          break;
+        case 'token':
+          if (messages.value[aiMessageIndex]) {
+            messages.value[aiMessageIndex].content += event.token;
+          }
+          if (!isStreaming.value) {
+            isStreaming.value = true;
+            isLoading.value = false;
+          }
+          await scrollToBottom();
+          break;
+        case 'final':
+          progress.value.stage = event.stage;
+          break;
+        case 'error':
+          // handled by the stream helper throwing an error
+          break;
+      }
     };
-    messages.value.push(aiMessage);
-    if (messages.value.length > props.maxMessages) {
-      messages.value.splice(0, messages.value.length - props.maxMessages);
+
+    const response: ChatResponse = await aiApiClient.chatStream(
+      {
+        question,
+        history,
+        include_sources: showSources.value,
+        temperature: 0.1,
+        conversation_id: conversationId ?? undefined,
+      },
+      handleStreamEvent,
+    );
+
+    if (messages.value[aiMessageIndex]) {
+      messages.value[aiMessageIndex].content = response.answer;
     }
+    if (showSources.value) {
+      if (messages.value[aiMessageIndex]) {
+        messages.value[aiMessageIndex].sources = response.sources?.length
+          ? response.sources
+          : (messages.value[aiMessageIndex].sources || []);
+      }
+    } else {
+      if (messages.value[aiMessageIndex]) {
+        messages.value[aiMessageIndex].sources = [];
+      }
+    }
+
     const resolvedConversationId = response.conversation_id || conversationId;
     if (resolvedConversationId) {
       const wasNewConversation = !conversationId;
@@ -607,7 +655,10 @@ const sendMessage = async () => {
   } catch (error) {
     hasError.value = true;
     errorMessage.value = getAIErrorMessage(error);
-    console.error('AI chat error:', error);
+    console.error('AI chat stream error:', error);
+    if (!messages.value[aiMessageIndex]?.content) {
+      messages.value.splice(aiMessageIndex, 1);
+    }
   } finally {
     if (progress.value.stage !== 'done') {
       progress.value.stage = '';
@@ -615,6 +666,7 @@ const sendMessage = async () => {
     retrievalPreviewSources.value = [];
     showRetrievalBanner.value = false;
     isLoading.value = false;
+    isStreaming.value = false;
     await scrollToBottom();
     await nextTick();
     inputRef.value?.focus();
@@ -1351,6 +1403,7 @@ defineExpose({ ask, open, close, currentQuestion });
   font-size: 17px;
   line-height: 1.82;
   width: 100%;
+  min-height: 50px;
 }
 .chatbot-window.inline-mode .user-message .message-text {
   background: var(--lg-user-bubble);
@@ -1450,6 +1503,8 @@ defineExpose({ ask, open, close, currentQuestion });
   font-weight: 600;
   line-height: 1.3;
   display: -webkit-box;
+  /* add standard line-clamp for compatibility per linter suggestion */
+  line-clamp: 2;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
@@ -2104,6 +2159,7 @@ defineExpose({ ask, open, close, currentQuestion });
 .message-text :deep(.list-item.numbered) {
   counter-increment: list-counter;
   position: relative;
+  left: 16px;
 }
 
 .message-text :deep(.list-item.numbered)::before {

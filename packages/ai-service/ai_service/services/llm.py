@@ -1,10 +1,14 @@
 import asyncio
-from typing import List, Dict, Any, Optional, Union
+import contextlib
+import inspect
+from typing import Any, AsyncGenerator, Awaitable, Callable, Dict, List, Optional
 import openai
 from loguru import logger
 
 from ai_service.config.settings import settings
-from ai_service.models.chat import ChatMessage
+
+
+StreamCallback = Callable[[str], Optional[Awaitable[None]]]
 
 
 class LLMService:
@@ -64,18 +68,19 @@ class LLMService:
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
         stream: bool = False,
+        on_token: Optional[StreamCallback] = None,
     ) -> str:
-        """
-        Generate a response using the configured LLM.
+        """Generate a response using the configured LLM.
 
         Args:
-            messages: List of messages in chat format
-            max_tokens: Maximum tokens in response
-            temperature: Sampling temperature
-            stream: Whether to stream the response
+            messages: List of messages in chat format.
+            max_tokens: Maximum tokens in response.
+            temperature: Sampling temperature.
+            stream: Whether to stream the response from the provider.
+            on_token: Optional callback invoked with each streamed token.
 
         Returns:
-            Generated response text
+            Generated response text.
         """
         await self.initialize()
 
@@ -84,31 +89,41 @@ class LLMService:
                 "LLM service not available. Please configure API_KEY in .env file."
             )
 
+        config = settings.get_llm_config()
+        resolved_max_tokens = max_tokens or config["max_tokens"]
+        resolved_temperature = temperature or config["temperature"]
+        model = config["model"]
+
         try:
-            return await self._generate_response(
-                messages, max_tokens, temperature, stream
+            if stream:
+                return await self._generate_response_stream(
+                    messages=messages,
+                    model=model,
+                    max_tokens=resolved_max_tokens,
+                    temperature=resolved_temperature,
+                    on_token=on_token,
+                )
+
+            return await self._generate_response_text(
+                messages=messages,
+                model=model,
+                max_tokens=resolved_max_tokens,
+                temperature=resolved_temperature,
             )
         except Exception as e:
             logger.error(f"LLM generation failed: {e}")
             raise
 
-    async def _generate_response(
+    async def _generate_response_text(
         self,
         messages: List[Dict[str, str]],
-        max_tokens: Optional[int],
-        temperature: Optional[float],
-        stream: bool,
+        model: str,
+        max_tokens: int,
+        temperature: float,
     ) -> str:
-        """Generate response using OpenAI-compatible API."""
+        """Generate a complete response using the OpenAI-compatible API."""
         if not self.openai_client:
             raise RuntimeError("LLM client not initialized")
-
-        config = settings.get_llm_config()
-
-        # Use configured defaults if not provided
-        max_tokens = max_tokens or config["max_tokens"]
-        temperature = temperature or config["temperature"]
-        model = config["model"]
 
         try:
             response = await self.openai_client.chat.completions.create(
@@ -116,24 +131,75 @@ class LLMService:
                 messages=messages,
                 max_tokens=max_tokens,
                 temperature=temperature,
-                stream=stream,
             )
-
-            if stream:
-                # Handle streaming response
-                full_response = ""
-                async for chunk in response:
-                    if chunk.choices[0].delta.content:
-                        full_response += chunk.choices[0].delta.content
-                return full_response
-            else:
-                return response.choices[0].message.content
+            return response.choices[0].message.content
 
         except openai.APIError as e:
             logger.error(f"LLM API error: {e}")
             raise
         except Exception as e:
             logger.error(f"Unexpected error in LLM generation: {e}")
+            raise
+
+    async def _generate_response_stream(
+        self,
+        *,
+        messages: List[Dict[str, str]],
+        model: str,
+        max_tokens: int,
+        temperature: float,
+        on_token: Optional[StreamCallback] = None,
+    ) -> str:
+        """Stream response from the provider while building the full message."""
+
+        if not self.openai_client:
+            raise RuntimeError("LLM client not initialized")
+
+        try:
+            response = await self.openai_client.chat.completions.create(
+                model=model,
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                stream=True,
+            )
+
+            collected_parts: List[str] = []
+
+            async for chunk in response:
+                if not chunk.choices:
+                    continue
+
+                delta = chunk.choices[0].delta
+                if not delta:
+                    continue
+
+                token = delta.content or ""
+                if not token:
+                    continue
+
+                collected_parts.append(token)
+
+                if on_token:
+                    await self._emit_stream_token(on_token, token)
+
+            return "".join(collected_parts)
+
+        except openai.APIError as e:
+            logger.error(f"LLM API error (streaming): {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error in LLM streaming: {e}")
+            raise
+
+    @staticmethod
+    async def _emit_stream_token(callback: StreamCallback, token: str) -> None:
+        try:
+            result = callback(token)
+            if inspect.isawaitable(result):
+                await result
+        except Exception as exc:
+            logger.error("Stream callback failed: {}", exc)
             raise
 
     async def check_health(self) -> Dict[str, Any]:
@@ -168,6 +234,51 @@ class LLMService:
         """Close all connections."""
         # OpenAI client doesn't need explicit closing
         pass
+
+    async def stream_response(
+        self,
+        messages: List[Dict[str, str]],
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+    ) -> AsyncGenerator[str, None]:
+        """Yield response chunks from the configured LLM."""
+        queue: asyncio.Queue[Any] = asyncio.Queue()
+        sentinel = object()
+
+        async def on_token(token: str) -> None:
+            await queue.put(token)
+
+        async def produce() -> None:
+            try:
+                await self.generate_response(
+                    messages=messages,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    stream=True,
+                    on_token=on_token,
+                )
+            except Exception as exc:  # pragma: no cover - forwarded via queue
+                await queue.put(exc)
+            finally:
+                await queue.put(sentinel)
+
+        producer_task = asyncio.create_task(produce())
+
+        try:
+            while True:
+                item = await queue.get()
+                if item is sentinel:
+                    break
+                if isinstance(item, Exception):
+                    raise item
+                yield item  # type: ignore[misc]
+        finally:
+            if not producer_task.done():
+                producer_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await producer_task
+            else:
+                await producer_task
 
 
 # Global LLM service instance
