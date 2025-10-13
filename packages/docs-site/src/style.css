@@ -23,30 +23,14 @@ body {
   font-size: var(--font-size-base);
   line-height: var(--line-height-relaxed);
   color: var(--color-text-primary);
-  background: var(--surface-gradient);
-  background-color: #eef4ff;
-  background-attachment: fixed;
+  background-color: var(--color-bg-primary);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  /* 确保可以正常滚动 */
   overflow-x: hidden;
   overflow-y: auto;
   position: relative;
-}
-
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(40% 40% at 12% 18%, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 65%),
-    radial-gradient(38% 40% at 82% 12%, rgba(90, 220, 255, 0.25) 0%, rgba(90, 220, 255, 0) 70%),
-    radial-gradient(40% 45% at 82% 78%, rgba(134, 158, 255, 0.22) 0%, rgba(134, 158, 255, 0) 68%);
-  mix-blend-mode: screen;
-  z-index: -1;
 }
 
 ::selection {
@@ -59,13 +43,11 @@ a {
   color: var(--color-primary);
   text-decoration: none;
   transition: var(--transition-base);
-  text-shadow: 0 0 12px rgba(10, 132, 255, 0.2);
 }
 
 a:hover {
   color: var(--color-primary-dark);
   text-decoration: underline;
-  text-shadow: 0 6px 24px rgba(10, 132, 255, 0.3);
 }
 
 a:focus {
@@ -129,61 +111,50 @@ li {
 /* 按钮样式 */
 button {
   border-radius: var(--radius-lg);
-  border: 1px solid var(--glass-panel-border-strong);
+  border: 1px solid var(--color-primary);
   padding: var(--spacing-sm) var(--spacing-lg);
   font-size: var(--font-size-base);
   font-weight: 500;
   font-family: inherit;
-  background: linear-gradient(135deg, rgba(10, 132, 255, 0.95) 0%, rgba(90, 200, 250, 0.85) 100%);
+  background: var(--color-primary);
   color: var(--color-text-inverse);
   cursor: pointer;
   transition: var(--transition-base);
   outline: none;
-  box-shadow: var(--glow-primary);
-  backdrop-filter: saturate(160%) blur(18px);
-  -webkit-backdrop-filter: saturate(160%) blur(18px);
+  box-shadow: var(--shadow-sm);
 }
 
 button:hover {
-  background: linear-gradient(135deg, rgba(10, 132, 255, 1) 0%, rgba(90, 200, 250, 0.95) 100%);
+  background: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
   transform: translateY(-1px);
-  box-shadow: 0 22px 50px rgba(10, 132, 255, 0.32);
+  box-shadow: var(--shadow-card);
 }
 
-button:focus {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
 
 button:active {
   transform: translateY(0);
-  box-shadow: var(--glow-subtle);
+  box-shadow: var(--shadow-sm);
 }
 
 /* 代码样式 */
 code {
   font-family: var(--font-family-mono);
   font-size: 0.9em;
-  background: rgba(255, 255, 255, 0.45);
+  background: var(--color-bg-subtle);
   padding: var(--spacing-xs) var(--spacing-sm);
   border-radius: var(--radius-sm);
   color: var(--color-text-primary);
-  backdrop-filter: blur(14px) saturate(150%);
-  -webkit-backdrop-filter: blur(14px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
 }
 
 pre {
   font-family: var(--font-family-mono);
-  background: rgba(255, 255, 255, 0.48);
+  background: var(--color-bg-subtle);
   padding: var(--spacing-lg);
   border-radius: var(--radius-lg);
   overflow-x: auto;
-  border: 1px solid rgba(255, 255, 255, 0.42);
-  box-shadow: var(--glow-subtle);
-  backdrop-filter: blur(22px) saturate(160%);
-  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
 }
 
 pre code {
@@ -197,21 +168,18 @@ pre code {
 blockquote {
   margin: var(--spacing-2xl) 0;
   padding: var(--spacing-lg) var(--spacing-xl);
-  border-left: 4px solid rgba(10, 132, 255, 0.45);
-  background: rgba(10, 132, 255, 0.08);
+  border-left: 4px solid var(--color-primary);
+  background: var(--color-primary-bg);
   border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
   color: var(--color-text-secondary);
   font-style: italic;
   position: relative;
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
-  box-shadow: 0 18px 36px rgba(10, 132, 255, 0.12);
 }
 
 blockquote::before {
   content: '"';
   font-size: var(--font-size-4xl);
-  color: rgba(10, 132, 255, 0.35);
+  color: var(--color-primary-100);
   position: absolute;
   top: var(--spacing-sm);
   left: var(--spacing-lg);
@@ -231,13 +199,11 @@ table {
   width: 100%;
   border-collapse: collapse;
   margin: var(--spacing-lg) 0;
-  background: var(--glass-panel-bg);
+  background: var(--color-bg-base);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: var(--glow-subtle);
-  backdrop-filter: blur(22px) saturate(150%);
-  -webkit-backdrop-filter: blur(22px) saturate(150%);
-  border: 1px solid var(--glass-panel-border);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
 }
 
 th, td {
@@ -247,15 +213,13 @@ th, td {
 }
 
 th {
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--color-bg-subtle);
   font-weight: 600;
   color: var(--color-text-primary);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 
 tr:hover {
-  background-color: rgba(255, 255, 255, 0.5);
+  background-color: var(--color-bg-hover);
 }
 
 /* 应用容器 */
@@ -271,19 +235,6 @@ tr:hover {
 main {
   min-height: 100vh;
   position: relative;
-  isolation: isolate;
-}
-
-main::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(32% 40% at 18% 18%, rgba(10, 132, 255, 0.12) 0%, rgba(10, 132, 255, 0) 68%),
-    radial-gradient(24% 32% at 82% 24%, rgba(94, 92, 230, 0.14) 0%, rgba(94, 92, 230, 0) 72%),
-    linear-gradient(170deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 45%);
-  pointer-events: none;
-  z-index: -1;
 }
 
 /* 实用工具类 */
@@ -306,82 +257,18 @@ main::before {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.35);
+  background: var(--color-bg-subtle);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(10, 132, 255, 0.35);
+  background: var(--border-color-strong);
   border-radius: var(--radius-full);
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.4);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(10, 132, 255, 0.55);
+  background: var(--color-text-tertiary);
 }
 
 @media (prefers-color-scheme: dark) {
-  body {
-    background: var(--surface-gradient-dark);
-    background-color: #050b18;
-  }
-
-  body::before {
-    background:
-      radial-gradient(36% 42% at 18% 18%, rgba(90, 200, 255, 0.24) 0%, rgba(90, 200, 255, 0) 72%),
-      radial-gradient(32% 38% at 78% 22%, rgba(94, 92, 230, 0.28) 0%, rgba(94, 92, 230, 0) 78%),
-      radial-gradient(38% 44% at 82% 72%, rgba(37, 99, 235, 0.22) 0%, rgba(37, 99, 235, 0) 72%);
-    mix-blend-mode: screen;
-  }
-
-  main::before {
-    background:
-      radial-gradient(32% 38% at 18% 20%, rgba(94, 231, 255, 0.14) 0%, rgba(94, 231, 255, 0) 68%),
-      radial-gradient(26% 32% at 84% 24%, rgba(94, 92, 230, 0.2) 0%, rgba(94, 92, 230, 0) 74%),
-      linear-gradient(178deg, rgba(4, 10, 22, 0.65) 6%, rgba(4, 10, 22, 0) 62%);
-  }
-
-  code {
-    background: rgba(15, 23, 42, 0.6);
-    border: 1px solid rgba(148, 191, 255, 0.28);
-    box-shadow: none;
-  }
-
-  pre {
-    background: rgba(10, 18, 35, 0.65);
-    border: 1px solid rgba(94, 129, 190, 0.32);
-    box-shadow: none;
-  }
-
-  blockquote {
-    background: rgba(90, 200, 255, 0.1);
-    border-left-color: rgba(90, 200, 255, 0.4);
-    box-shadow: 0 18px 38px rgba(4, 14, 34, 0.55);
-  }
-
-  blockquote::before {
-    color: rgba(94, 231, 255, 0.32);
-  }
-
-  table {
-    background: rgba(10, 18, 35, 0.65);
-    border: 1px solid rgba(94, 129, 190, 0.32);
-    box-shadow: none;
-  }
-
-  th {
-    background: rgba(14, 26, 48, 0.7);
-  }
-
-  ::-webkit-scrollbar-track {
-    background: rgba(4, 10, 22, 0.6);
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: rgba(94, 231, 255, 0.35);
-    box-shadow: inset 0 0 0 2px rgba(4, 10, 22, 0.6);
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(94, 231, 255, 0.55);
-  }
+  /* 暗色模式下的特定样式已在 design-system.css 中定义 */
 }
