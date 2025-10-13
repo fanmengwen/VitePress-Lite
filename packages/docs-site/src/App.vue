@@ -19,8 +19,8 @@ const seoMeta = computed(() => {
   const routeMeta = route.meta || {}
   
   return {
-    title: (routeMeta.title as string) || 'VitePress Lite - 现代化文档站点',
-    description: (routeMeta.description as string) || 'VitePress Lite - 基于Vite + Vue 3的轻量级文档站点解决方案',
+    title: (routeMeta.title as string) || 'DocuMind | AI-Powered Document Q&A Platform',
+    description: (routeMeta.description as string) || 'DocuMind is a cutting-edge AI Q&A platform. It deeply understands your private knowledge bases and local documents to provide precise, fast answers through natural language conversation, unlocking the full potential of your knowledge',
     keywords: (routeMeta.keywords as string) || 'vite,vue,documentation,markdown,前端,开发工具',
     author: (routeMeta.author as string) || 'VitePress Lite Team'
   }

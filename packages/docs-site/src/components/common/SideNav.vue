@@ -3,7 +3,7 @@
     <div class="sidebar-body">
       <div class="brand-block">
         <router-link to="/" class="brand-link">
-          <span class="brand-icon">🧠</span>
+          <span class="brand-icon">💬</span>
           <div class="brand-texts">
             <span class="brand-title">智识自答</span>
             <span class="brand-subtitle">文档驱动的 AI 助手</span>
@@ -12,7 +12,8 @@
       </div>
 
       <nav class="nav-links">
-        <button class="nav-link btn btn-ghost" :class="{ active: isCreating }" :disabled="isCreating" @click="handleNewConversation">
+        <button class="nav-link btn btn-ghost" :class="{ active: isCreating }" :disabled="isCreating"
+          @click="handleNewConversation">
           <span class="icon">💬</span>
           <span>{{ isCreating ? '创建中...' : '新建对话' }}</span>
         </button>
@@ -30,16 +31,11 @@
       <section class="history-section">
         <header class="section-header">
           <span class="section-title">历史对话</span>
-        <div class="section-actions">
-          <button
-            class="icon-btn"
-            :disabled="loading && !hasConversations"
-            @click="handleRefresh"
-            title="刷新对话列表"
-          >
-            ⟳
-          </button>
-        </div>
+          <div class="section-actions">
+            <button class="icon-btn" :disabled="loading && !hasConversations" @click="handleRefresh" title="刷新对话列表">
+              <img src="../../../public/refresh.svg" alt="刷新" width="16" height="16" />
+            </button>
+          </div>
         </header>
 
         <div v-if="loading && !hasConversations" class="history-loading">
@@ -47,31 +43,21 @@
         </div>
 
         <ul v-else-if="hasConversations || isDrafting" class="history-list">
-          <li
-            v-if="isDrafting"
-            class="history-item tile draft active"
-          >
+          <li v-if="isDrafting" class="history-item tile draft active">
             <div class="history-button" @click="handleSelectDraft">
               <div class="history-title">新的对话</div>
               <div class="history-meta">等待你的问题…</div>
             </div>
           </li>
-          <li
-            v-for="item in conversations"
-            :key="item.id"
-            :class="['history-item', 'tile', { active: route.path === '/' && item.id === activeConversationId, 'tile-active': route.path === '/' && item.id === activeConversationId }]"
-          >
+          <li v-for="item in conversations" :key="item.id"
+            :class="['history-item', 'tile', { active: route.path === '/' && item.id === activeConversationId, 'tile-active': route.path === '/' && item.id === activeConversationId }]">
             <div class="history-button" @click="handleSelectConversation(item.id)">
               <div class="history-title" :title="item.title">
                 {{ formatConversationTitle(item.title) }}
               </div>
               <div class="history-meta">{{ formatUpdatedAt(item.updated_at) }}</div>
             </div>
-            <button
-              class="icon-btn delete-button"
-              title="删除对话"
-              @click.stop="handleDeleteConversation(item.id)"
-            >
+            <button class="icon-btn delete-button" title="删除对话" @click.stop="handleDeleteConversation(item.id)">
               ✕
             </button>
           </li>
@@ -84,19 +70,6 @@
         <p v-if="storeError" class="store-error">{{ storeError }}</p>
       </section>
 
-      <section class="knowledge-section">
-        <header class="section-header">
-          <span class="section-title">知识库精选</span>
-        </header>
-        <p class="knowledge-desc">精选文档与笔记，辅助 AI 给出高质量回答。</p>
-        <!-- <div class="knowledge-links">
-          <button class="knowledge-button" @click="handleOpenKnowledgeBase">
-            浏览全部知识库
-          </button>
-          <router-link class="knowledge-quick" to="/kb#articles">最新文章</router-link>
-          <router-link class="knowledge-quick" to="/kb#overview">文档总览</router-link>
-        </div> -->
-      </section>
     </div>
 
     <footer class="sidebar-footer">
@@ -107,14 +80,8 @@
         </div>
       </div>
     </footer>
-    <ConfirmModal
-      v-model="showDeleteModal"
-      title="删除对话"
-      message="此操作无法撤销，确定要删除该对话吗？"
-      confirm-text="删除"
-      cancel-text="取消"
-      @confirm="confirmDelete"
-    />
+    <ConfirmModal v-model="showDeleteModal" title="删除对话" message="此操作无法撤销，确定要删除该对话吗？" confirm-text="删除" cancel-text="取消"
+      @confirm="confirmDelete" />
   </aside>
 </template>
 
@@ -259,13 +226,16 @@ const githubUrl =
 }
 
 .side-nav::before,
-.side-nav::after { content: none; }
+.side-nav::after {
+  content: none;
+}
 
 .sidebar-body {
   flex: 1;
   padding: 24px 22px 18px;
   backdrop-filter: inherit;
   -webkit-backdrop-filter: inherit;
+  border: 1px solid var(--border-color);
 }
 
 .brand-block {
@@ -284,9 +254,13 @@ const githubUrl =
   transition: transform var(--transition-base);
 }
 
-.brand-link::after { content: none; }
+.brand-link::after {
+  content: none;
+}
 
-.brand-link:hover { transform: translateY(-2px); }
+.brand-link:hover {
+  transform: translateY(-2px);
+}
 
 .brand-link:hover::after {
   opacity: 0.6;
@@ -346,7 +320,9 @@ const githubUrl =
   transform: translateY(-1px);
 }
 
-.nav-link.active { color: var(--color-primary); }
+.nav-link.active {
+  color: var(--color-primary);
+}
 
 .icon {
   width: 18px;
@@ -383,9 +359,13 @@ const githubUrl =
   gap: 6px;
 }
 
-.icon-button { display: inline-flex; }
+.icon-button {
+  display: inline-flex;
+}
 
-.icon-button:hover:not(:disabled) { transform: translateY(-1px); }
+.icon-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
 
 .icon-button:disabled {
   opacity: 0.45;
@@ -400,15 +380,20 @@ const githubUrl =
 .history-loading .skeleton {
   height: 54px;
   border-radius: 16px;
-  background: linear-gradient(120deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.36) 50%, rgba(255, 255, 255, 0.12) 100%);
+  background: black;
   background-size: 200% 100%;
   margin-bottom: 12px;
   animation: shimmer 1.4s ease-in-out infinite;
 }
 
 @keyframes shimmer {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 200% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+
+  100% {
+    background-position: 200% 50%;
+  }
 }
 
 .history-list {
@@ -431,9 +416,13 @@ const githubUrl =
   padding: 8px;
 }
 
-.history-item:hover { transform: translateY(-1px); }
+.history-item:hover {
+  transform: translateY(-1px);
+}
 
-.history-item.active { border-color: rgba(94, 200, 255, 0.52); }
+.history-item.active {
+  border-color: rgba(94, 200, 255, 0.52);
+}
 
 .history-item.draft {
   border-style: dashed;
@@ -481,9 +470,14 @@ const githubUrl =
   color: rgba(62, 84, 120, 0.68);
 }
 
-.delete-button { width: 32px; height: 32px; }
+.delete-button {
+  width: 32px;
+  height: 32px;
+}
 
-.delete-button:hover { transform: translateY(-1px); }
+.delete-button:hover {
+  transform: translateY(-1px);
+}
 
 .history-empty {
   padding: 20px;
@@ -524,7 +518,9 @@ const githubUrl =
   font-weight: 500;
 }
 
-.knowledge-button:hover { transform: translateY(-1px); }
+.knowledge-button:hover {
+  transform: translateY(-1px);
+}
 
 .knowledge-quick {
   font-size: 13px;
