@@ -1,0 +1,243 @@
+---
+title: "【后端集成 ​】"
+author: "mengwen"
+date: "2025-11-16"
+published: true
+excerpt: "Note 如果你想使用传统的后端（如 Rails, Laravel）来服务 HTML，但使用 Vite 来服务其他资源，..."
+---
+
+# 后端集成 ​
+
+Note
+
+如果你想使用传统的后端（如 Rails, Laravel）来服务 HTML，但使用 Vite 来服务其他资源，可以查看在 [Awesome Vite](https://github.com/vitejs/awesome-vite#integrations-with-backends) 上的已有的后端集成列表。
+
+如果你需要自定义集成，你可以按照本指南的步骤配置它：
+
+1.  在你的 Vite 配置中配置入口文件和启用创建 `manifest`：
+    
+    vite.config.js
+    
+    js
+    
+    ```
+    export default defineConfig({
+      server: {
+        cors: {
+          // 通过浏览器访问的源
+          origin: 'http://my-backend.example.com',
+        },
+      },
+      build: {
+        // 在 outDir 中生成 .vite/manifest.json
+        manifest: true,
+        rollupOptions: {
+          // 覆盖默认的 .html 入口
+          input: '/path/to/main.js'
+        }
+      }
+    })
+    ```
+    
+    如果你没有禁用 [module preload 的 polyfill](/config/build-options#build-polyfillmodulepreload)，你还需在你的入口处添加此 polyfill：
+    
+    js
+    
+    ```
+    // 在你应用的入口起始处添加此 polyfill
+    import 'vite/modulepreload-polyfill'
+    ```
+    
+2.  在开发环境中，在服务器的 HTML 模板中注入以下内容（用正在运行的本地 URL 替换 `http://localhost:5173`）：
+    
+    html
+    
+    ```
+    <!-- 如果是在开发环境中 -->
+    <script type="module" src="http://localhost:5173/@vite/client"></script>
+    <script type="module" src="http://localhost:5173/main.js"></script>
+    ```
+    
+    为了正确地提供资源，你有两种选项：
+    
+    *   确保服务器被配置过，将会拦截代理资源请求给到 Vite 服务器
+    *   设置 [`server.origin`](/config/server-options#server-origin) 以求生成的资源链接将以服务器 URL 形式被解析而非一个相对路径
+    
+    这对于图片等资源的正确加载是必需的。
+    
+    如果你正使用 `@vitejs/plugin-react` 配合 React，你还需要在上述脚本前添加下面这个，因为插件不能修改你正在服务的 HTML（请将 `http://localhost:5173` 替换为 Vite 正在运行的本地 URL）：
+    
+    html
+    
+    ```
+    <script type="module">
+      import RefreshRuntime from 'http://localhost:5173/@react-refresh'
+      RefreshRuntime.injectIntoGlobalHook(window)
+      window.$RefreshReg$ = () => {}
+      window.$RefreshSig$ = () => (type) => type
+      window.__vite_plugin_react_preamble_installed__ = true
+    </script>
+    ```
+    
+3.  在生产环境中, 在运行 `vite build` 之后，一个 `.vite/manifest.json` 文件将与静态资源文件一同生成。一个示例清单文件会像下面这样：
+    
+    .vite/manifest.json
+    
+    json
+    
+    ```
+    {
+      "_shared-B7PI925R.js": {
+        "file": "assets/shared-B7PI925R.js",
+        "name": "shared",
+        "css": ["assets/shared-ChJ_j-JJ.css"]
+      },
+      "_shared-ChJ_j-JJ.css": {
+        "file": "assets/shared-ChJ_j-JJ.css",
+        "src": "_shared-ChJ_j-JJ.css"
+      },
+      "logo.svg": {
+        "file": "assets/logo-BuPIv-2h.svg",
+        "src": "logo.svg"
+      },
+      "baz.js": {
+        "file": "assets/baz-B2H3sXNv.js",
+        "name": "baz",
+        "src": "baz.js",
+        "isDynamicEntry": true
+      },
+      "views/bar.js": {
+        "file": "assets/bar-gkvgaI9m.js",
+        "name": "bar",
+        "src": "views/bar.js",
+        "isEntry": true,
+        "imports": ["_shared-B7PI925R.js"],
+        "dynamicImports": ["baz.js"]
+      },
+      "views/foo.js": {
+        "file": "assets/foo-BRBmoGS9.js",
+        "name": "foo",
+        "src": "views/foo.js",
+        "isEntry": true,
+        "imports": ["_shared-B7PI925R.js"],
+        "css": ["assets/foo-5UjPuW-k.css"]
+      }
+    }
+    ```
+    
+    manifest 具有 `Record<name, chunk>` 结构，其中每个块遵循 `ManifestChunk` 接口：
+    
+    ts
+    
+    ```
+    interface ManifestChunk {
+      src?: string
+      file: string
+      css?: string[]
+      assets?: string[]
+      isEntry?: boolean
+      name?: string
+      names?: string[]
+      isDynamicEntry?: boolean
+      imports?: string[]
+      dynamicImports?: string[]
+    }
+    ```
+    
+
+清单中的每个条目代表以下之一：
+
+*   **Entry chunks**：由 [`build.rollupOptions.input`](https://rollupjs.org/configuration-options/#input) 中指定的文件生成。这些块的 isEntry 属性设置为 true，其键值是项目根目录的相对 src 路径。
+*   **Dynamic entry chunks**：由动态导入生成。这些块的 isDynamicEntry 属性设置为 true，其键值是项目根目录的相对 src 路径。
+*   **Non-entry chunks**：其键值是生成文件的基本名称加上前缀 `_`。
+*   **Asset chunks**：由导入的资源（例如图片、字体）生成。其键值是项目根目录的相对 src 路径。
+*   **CSS 文件**：当 [`build.cssCodeSplit`](/config/build-options#build-csscodesplit) 为 `false` 时，将生成一个带有 `style.css` 键的 CSS 文件。当 `build.cssCodeSplit` 不为 `false` 时，键的生成方式与 JS 代码块类似（即，入口代码块不带 `_` 前缀，非入口代码块带 `_` 前缀）。
+
+代码块将包含其静态和动态导入的信息（两者都是映射到清单中相应代码块的键），以及它们对应的 CSS 和资源文件（如果有）。
+
+4.  你可以利用这个文件来渲染带有哈希文件名的链接或预加载指令。
+    
+    这是一个用来渲染正确链接的 HTML 模板示例。这里的语法仅用于解释， 你需要用你的服务器模板语言来替换。`importedChunks` 函数只是 用来说明，并不是 Vite 提供的。
+    
+    html
+    
+    ```
+    <!-- 如果是生产环境 -->
+    
+    <!-- 对于 manifest[name].css 中的 cssFile -->
+    <link rel="stylesheet" href="/{{ cssFile }}" />
+    
+    <!-- 对于 importedChunks(manifest, name) 中的 chunk  -->
+    <!-- 对于 chunk.css 中的 cssFile -->
+    <link rel="stylesheet" href="/{{ cssFile }}" />
+    
+    <script type="module" src="/{{ manifest[name].file }}"></script>
+    
+    <!-- 对于 importedChunks(manifest, name) 中的 chunk  -->
+    <link rel="modulepreload" href="/{{ chunk.file }}" />
+    ```
+    
+    具体来说，后端生成 HTML 时，若给定一个清单文件（manifest file）和一个入口点（entry point），应包含以下标签。 注意，为获得最佳性能，建议遵循以下顺序：
+    
+    1.  为入口点代码块的 `css` 列表中的每个文件添加 `<link rel="stylesheet">` 标签（如果存在）。
+    2.  递归跟踪入口点 `imports` 列表中的所有代码块，并为每个导入代码块的 `css` 列表（如果存在）中的每个 CSS 文件添加 `<link rel="stylesheet">` 标签。
+    3.  为入口点代码块的 `file` 键添加一个标签。对于 JavaScript，可以是 `<script type="module">`；对于 CSS，可以是 `<link rel="stylesheet">`。
+    4.  （可选）为每个导入的 JavaScript 代码块的 `file` 添加 `<link rel="modulepreload">` 标签，同样从入口点代码块开始递归跟踪导入。
+    
+    按照上面的示例 manifest，对于入口文件 `views/foo.js`，在生产环境中应包含以下标签：
+    
+    html
+    
+    ```
+    <link rel="stylesheet" href="assets/foo-5UjPuW-k.css" />
+    <link rel="stylesheet" href="assets/shared-ChJ_j-JJ.css" />
+    <script type="module" src="assets/foo-BRBmoGS9.js"></script>
+    <!-- 可选 -->
+    <link rel="modulepreload" href="assets/shared-B7PI925R.js" />
+    ```
+    
+    而对于入口文件 `views/bar.js`，应该包含以下标签：
+    
+    html
+    
+    ```
+    <link rel="stylesheet" href="assets/shared-ChJ_j-JJ.css" />
+    <script type="module" src="assets/bar-gkvgaI9m.js"></script>
+    <!-- 可选 -->
+    <link rel="modulepreload" href="assets/shared-B7PI925R.js" />
+    ```
+    
+    `importedChunks` 的伪代码实现
+    
+    `importedChunks` 在 TypeScript 中的一个伪实现示例 （这需要根据您的编程语言和模板语言进行调整）：
+    
+    ts
+    
+    ```
+    import type { Manifest, ManifestChunk } from 'vite'
+    
+    export default function importedChunks(
+      manifest: Manifest,
+      name: string,
+    ): ManifestChunk[] {
+      const seen = new Set<string>()
+    
+      function getImportedChunks(chunk: ManifestChunk): ManifestChunk[] {
+        const chunks: ManifestChunk[] = []
+        for (const file of chunk.imports ?? []) {
+          const importee = manifest[file]
+          if (seen.has(file)) {
+            continue
+          }
+          seen.add(file)
+    
+          chunks.push(...getImportedChunks(importee))
+          chunks.push(importee)
+        }
+    
+        return chunks
+      }
+    
+      return getImportedChunks(manifest[name])
+    }
+    ```
